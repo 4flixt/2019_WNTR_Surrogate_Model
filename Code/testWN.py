@@ -16,6 +16,7 @@ import pickle
 import wntr.network.controls as controls
 import random
 from random import uniform as rnd
+import pdb
 
 
 class testWN:
@@ -123,13 +124,14 @@ class testWN:
         sim_results = sim.run_sim()
         return sim_results
 
-    def addControls(self, link_name, open_or_close, node_name, above_or_below, value, control_name):
+    def addControls(self, link_name, attr, attr_value, node_name, above_or_below, cond_value, control_name):
         '''
         : type: link_name: string
-        : type: open_or_close: 1 or 0, 1 for open and 0 for close
+        : type: attr: string. Which attribute to change. Typically "status"
+        : type: attr_value: 1 or 0, 1 for open and 0 for close
         : type: node_name: string, the name of a node influenced by condition
         : type: above_or_below: string, either larger '>' or smaller '<'
-        : type: value: int, above what level and below what level
+        : type: cond_value: int, above what level and below what level
         : type: control_name: string, the name of the control added
         : rtype: bool, true of false
         '''
@@ -138,13 +140,14 @@ class testWN:
         set the actions of certain link
         '''
         control_link = self.wn.get_link(link_name)
-        control_act = controls.ControlAction(control_link, 'status', open_or_close)
+        control_act = controls.ControlAction(control_link, attr, attr_value)
 
         '''
         set the conditions regarding the control link
         '''
         control_node = self.wn.get_node(node_name)
-        control_cond = controls.ValueCondition(control_node, 'level', above_or_below, value)
+
+        control_cond = controls.ValueCondition(control_node, 'level', above_or_below, cond_value)
         new_control = controls.Control(control_cond, control_act)
         self.wn.add_control(control_name, new_control)
 

@@ -91,11 +91,15 @@ nHoursSim = 24*nDaysSim
 ctown.wn.options.time.hydraulic_timestep = 60*15*4  # 15 min
 ctown.wn.options.time.quality_timestep = 60*5  # 5 min
 ctown.wn.options.quality.mode = 'AGE'
+ctown.wn.options.results.energystr = True
 
 start_time = time.time()
 
+# TODO: Add controls
+ctown.addControls('V45', 'setting', 10., 'T4', '<', 3, 'user_added_1')
+ctown.addControls('V45', 'setting', 40., 'T4', '>', 4, 'user_added_2')
+
 for i in range(nHoursSim):
-    # TODO: Add controls
     # Run the simulation for the next time step
     ctown.wn.options.time.duration = 3600*i
     sim = wntr.sim.EpanetSimulator(ctown.wn)
