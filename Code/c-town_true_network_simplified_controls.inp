@@ -828,7 +828,7 @@
 
 [VALVES]
 ;ID              	Node1           	Node2           	Diameter    	Type	Setting     	MinorLoss   
- v1              	J35             	J88             	203.2       	PRV 	40          	0.0000      	;
+ V1              	J35             	J88             	203.2       	PRV 	40          	0.0000      	;
  V45             	J253            	J130            	152.4       	PRV 	40          	0.0000      	;
  V47             	J129            	J169            	101.6       	PRV 	40          	0.0000      	;
  V2              	J14             	J422            	254         	TCV 	0           	0           	;
@@ -845,7 +845,10 @@
  PU6             	Open
  PU8             	Open
  PU10            	Open
- V2              	None
+ V2              	Active
+ V1              	Active
+ V45              	Active
+ V47             	Active
 
 [PATTERNS]
 ;ID              	Multipliers
@@ -1038,8 +1041,8 @@
  1               	138.8889    	1           
 ;PUMP:
  8               	0           	70          
- 8               	60          	50          
- 8               	100         	30          
+ 8               	90          	50          
+ 8               	150         	30          
 ;PUMP:
  9               	0           	90          
  9               	30          	70          

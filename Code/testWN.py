@@ -54,7 +54,7 @@ class testWN:
 
         link_names = self.wn.link_name_list
         pump_names = [pump for pump in link_names if pump.startswith("PU")]
-        pipe_names = [pipe for pipe in link_names if pipe.startswith("P")]
+        pipe_names = [pipe for pipe in link_names if pipe.startswith("P") and not(pipe.startswith("PU"))]
         valve_names = [valve for valve in link_names if valve.startswith("V")]
 
         return [pump_names, pipe_names, valve_names]
