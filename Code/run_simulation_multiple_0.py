@@ -120,11 +120,14 @@ for i in range(1): # Number of simulations
         # ::: Run the simulation for the next time step
         ctown.wn.options.time.duration = 900#*t
         sim = wntr.sim.EpanetSimulator(ctown.wn)
-        tempFile ="tempWN.inp"
+        wntr.sim.WNTRSimulator
         results_temp = sim.run_sim()
+        
+        # Saving temporary .inp file        
+        tempFile ="tempWN.inp"
         ctown.wn.write_inpfile(tempFile)
         
-        results_temp.tankElevations = results_temp.node['head'][nodeNames[0]]-tankEl
+        results_temp.tankLevels = results_temp.node['head'][nodeNames[0]]-tankEl
         #for j in range(len(control_components)):
          #   results_temp_setting.at[t,control_components[j]] = control_vector[j]
                        
@@ -136,10 +139,11 @@ for i in range(1): # Number of simulations
         #del results_setting
 
         # ::: Saving simulation output
-        print('Total simulation time: %.3f s' % (time.time()-start_time))
-        print(results_temp.node)
+        print(results_temp.tankLevels)
 #       with open("results_sim_%s_%s_try.pkl" % (i,t), "wb") as f:
         with open("results_sim_%s_try.pkl" % (i), "ab") as f:
             pickle.dump(results_temp, f)
             f.close()
+
+    print('Total simulation time: %.3f s' % (time.time()-start_time))
 
