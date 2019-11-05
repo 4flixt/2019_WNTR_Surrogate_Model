@@ -38,7 +38,8 @@ cluster_labels = pd.read_json('cluster_labels.json')
 n_clusters = 30
 
 # Get results
-with open('../results.pkl', 'rb') as f:
+file = '/home/ffiedler/tubCloud/Shared/WDN_SurrogateModels/_RESULTS/150sim/results_sim_14_try.pkl'
+with open(file, 'rb') as f:
     results = pickle.load(f)
 
 
@@ -97,8 +98,8 @@ state_dict = {'jun_cl_press_mean': jun_cl_press_mean,
               # 'jun_cl_press_std': jun_cl_press_std,
               # 'dqual_cl_press_mean': dqual_cl_press_mean,
               # 'dqual_cl_press_std': dqual_cl_press_std,
-              'tank_press': tank_press,
-              'tank_level': tank_level,
+              # 'tank_press': tank_press,
+              # 'tank_level': tank_level,
               # 'tank_qual': tank_qual,
               # 'reservoir_press': reservoir_press,
               # 'reservoir_level': reservoir_level,
@@ -123,29 +124,49 @@ Data Pre-Processing: 03 - Neural Network I/O
 """
 
 dstates = sys_states.diff(axis=0)
-dstates_next = sys_states.shift(-1, axis=0)
+dstates_next = dstates.shift(-1, axis=0)
 
 nn_input_dict = {'sys_states': sys_states,
                  'sys_inputs': sys_inputs}
 
 nn_input = pd.concat(nn_input_dict.values(), axis=1, keys=nn_input_dict.keys())
 
+if False:
+    n_arx = 3
+    arx_input = []
+    for i in range(n_arx):
+        arx_input.append(nn_input.shift(i, axis=0))
+
+    arx_input = pd.concat(arx_input, axis=1)
+    nn_input = arx_input
+
+
 nn_output = dstates_next
 
 # Filter nan:
 output_filter = nn_output.isnull().any(axis=1)
-output_filter
-
 if output_filter.any():
     nn_input = nn_input[~output_filter]
     nn_output = nn_output[~output_filter]
+
+input_filter = nn_input.isnull().any(axis=1)
+if input_filter.any():
+    nn_input = nn_input[~input_filter]
+    nn_output = nn_output[~input_filter]
+
+# Scale input and output:
+input_scaling = nn_input.max()
+nn_input_scaled = nn_input/input_scaling
+
+output_scaling = nn_output.max()
+nn_output_scaled = nn_output/output_scaling
 
 """
 --------------------------------------------------
 Neural Network: 02 - Create Model
 --------------------------------------------------
 """
-n_layer = 3
+n_layer = 2
 n_units = 50
 l1_regularizer = 0
 
@@ -177,7 +198,8 @@ model = keras.Model(inputs=inputs, outputs=outputs)
 
 model.summary()
 
-model.compile(optimizer='Adam',
+optim = keras.optimizers.Adam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, amsgrad=False)
+model.compile(optimizer=optim,
               loss='mse')
 
 
