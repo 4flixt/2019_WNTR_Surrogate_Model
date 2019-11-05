@@ -49,7 +49,7 @@ min_control = np.array([0.,0.,0.,0.,0.,0.,0.,0.,0.]) # Lower bondary for control
 max_control = np.array([2., 2., 2., 2., 2., 600.0, 600.0, 600.0, 70. ]) # Upper bondary for controls
     
 # ::: Running multiple simulations
-for i in range(10): # Number of simulations
+for i in range(150): # Number of simulations
     print(i)
 
     # ::: Initializing random seed
@@ -102,8 +102,13 @@ for i in range(10): # Number of simulations
         currComp = ctown.wn.get_link(control_components[j])
         for t in range(simTimeSteps):
             cond = controls.SimTimeCondition(ctown.wn, None,t*900)
-            act = controls.ControlAction(currComp, 'setting', control_matrix[t,j])
-            ctrl = controls.Control(cond,act, name="control_components_%s_%s" % (control_components[j],t))
+            if np.isin(control_components[j], ctown.wn.head_pump_name_list): #is a head pump
+                act = controls.ControlAction(currComp, 'setting', control_matrix[t,j])
+                act1 = controls.ControlAction(currComp, 'status', 1)
+                ctrl = controls.Rule(cond,[act,act1], name="control_components_%s_%s" % (control_components[j],t))
+            elif np.isin(control_components[j], ctown.wn.valve_name_list): #is a valve
+                act = controls.ControlAction(currComp, 'setting', control_matrix[t,j])
+                ctrl = controls.Control(cond,act, name="control_components_%s_%s" % (control_components[j],t))
             ctown.wn.add_control("control_components_%s_%s" % (control_components[j],t), ctrl)
 
     # ::: Running the simulation
