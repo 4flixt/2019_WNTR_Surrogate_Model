@@ -35,6 +35,7 @@ Data Pre-Processing: 01
 
 # Get clusters
 cluster_labels = pd.read_json('cluster_labels.json')
+pressure_factor = pd.read_json('pressure_factor.json')
 n_clusters = 30
 
 # Get results
@@ -44,7 +45,10 @@ with open(file, 'rb') as f:
 
 
 """ Junctions """
-jun_cl_press = results.node['pressure'][node_names[2]].groupby(cluster_labels.loc['pressure'], axis=1)
+# Scale junction pressure
+junction_pressure_scaled = results.node['pressure'][node_names[2]]/pressure_factor.to_numpy()
+
+jun_cl_press = junction_pressure_scaled.groupby(cluster_labels.loc['pressure'], axis=1)
 jun_cl_press_mean = jun_cl_press.mean()
 jun_cl_press_std = jun_cl_press.std()
 
@@ -71,7 +75,6 @@ reservoir_press = results.node['pressure'][node_names[1]]
 reservoir_level = results.node['head'][node_names[1]]-nw_node_df[node_names[1]].loc['elevation']
 
 reservoir_qual = results.node['quality'][node_names[1]]
-reservoir_level
 
 """ Pumps """
 # Overview over all pumps in nw: nw_link_df[nw_link_df.keys()[nw_link_df.loc['link_type'] == 'Pump']]
@@ -98,7 +101,7 @@ state_dict = {'jun_cl_press_mean': jun_cl_press_mean,
               # 'jun_cl_press_std': jun_cl_press_std,
               # 'dqual_cl_press_mean': dqual_cl_press_mean,
               # 'dqual_cl_press_std': dqual_cl_press_std,
-              # 'tank_press': tank_press,
+              'tank_press': tank_press,
               # 'tank_level': tank_level,
               # 'tank_qual': tank_qual,
               # 'reservoir_press': reservoir_press,
@@ -123,8 +126,7 @@ Data Pre-Processing: 03 - Neural Network I/O
 --------------------------------------------------
 """
 
-dstates = sys_states.diff(axis=0)
-dstates_next = dstates.shift(-1, axis=0)
+nn_output = sys_states.shift(-1,axis=0)
 
 nn_input_dict = {'sys_states': sys_states,
                  'sys_inputs': sys_inputs}
@@ -132,7 +134,7 @@ nn_input_dict = {'sys_states': sys_states,
 nn_input = pd.concat(nn_input_dict.values(), axis=1, keys=nn_input_dict.keys())
 
 if False:
-    n_arx = 3
+    n_arx = 5
     arx_input = []
     for i in range(n_arx):
         arx_input.append(nn_input.shift(i, axis=0))
@@ -160,47 +162,3 @@ nn_input_scaled = nn_input/input_scaling
 
 output_scaling = nn_output.max()
 nn_output_scaled = nn_output/output_scaling
-
-"""
---------------------------------------------------
-Neural Network: 02 - Create Model
---------------------------------------------------
-"""
-n_layer = 2
-n_units = 50
-l1_regularizer = 0
-
-model_param = {}
-model_param['n_in'] = nn_input.shape[1]
-model_param['n_out'] = nn_output.shape[1]
-model_param['n_units'] = (n_layer)*[n_units]
-model_param['activation'] = (n_layer) * ['tanh']
-model_param['l1_regularizer'] = (n_layer) * [l1_regularizer]
-
-inputs = keras.Input(shape=(model_param['n_in'],))
-
-layer_list = [inputs]
-
-
-for i in range(len(model_param['n_units'])-1):
-    layer_list.append(
-        keras.layers.Dense(model_param['n_units'][i],
-                           activation=model_param['activation'][i],
-                           # kernel_regularizer=regularizers.l1(model_param['l1_regularizer'][i])(layer_list[i])
-                           )(layer_list[i])
-    )
-
-outputs = keras.layers.Dense(model_param['n_out'],
-                             activation='linear')(layer_list[-1])
-
-model = keras.Model(inputs=inputs, outputs=outputs)
-
-
-model.summary()
-
-optim = keras.optimizers.Adam(learning_rate=0.01, beta_1=0.9, beta_2=0.999, amsgrad=False)
-model.compile(optimizer=optim,
-              loss='mse')
-
-
-model.fit(nn_input, nn_output, batch_size=64, epochs=1000)
