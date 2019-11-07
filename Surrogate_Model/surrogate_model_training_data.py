@@ -11,21 +11,21 @@ import sys
 sys.path.append('../')
 from testWN import testWN as twm
 
-def get_data(file_list, narx_horizon):
+
+def get_data(file_list, narx_horizon, narx_output=False):
     """
     --------------------------------------------------
     Get network informations
     --------------------------------------------------
     """
 
-    inp_file = '../../Code/c-town_true_network_simplified_controls.inp'
+    inp_file = '../Code/c-town_true_network_simplified_controls.inp'
     ctown = twm(inp_file)
     nw_node_df = pd.DataFrame(ctown.wn.nodes.todict())
     nw_link_df = pd.DataFrame(ctown.wn.links.todict())
 
     node_names = ctown.getNodeName()
     link_names = ctown.getLinkName()
-
 
     """
     --------------------------------------------------
@@ -45,7 +45,6 @@ def get_data(file_list, narx_horizon):
         # Get results
         with open(file, 'rb') as f:
             results = pickle.load(f)
-
 
         """ Junctions """
         # Scale junction pressure
@@ -71,7 +70,6 @@ def get_data(file_list, narx_horizon):
 
         tank_qual = results.node['quality'][node_names[0]]
 
-
         """ Reservoirs """
 
         reservoir_press = results.node['pressure'][node_names[1]]
@@ -96,7 +94,6 @@ def get_data(file_list, narx_horizon):
         PRValve_dp = results.link['setting'][nw_link_df.keys()[nw_link_df.loc['valve_type'] == 'PRV']]
         TCValve_throttle = results.link['setting'][nw_link_df.keys()[nw_link_df.loc['valve_type'] == 'TCV']]
 
-
         """
         --------------------------------------------------
         Data Pre-Processing: 02 - Create states + inputs
@@ -117,7 +114,6 @@ def get_data(file_list, narx_horizon):
 
         sys_states = pd.concat(state_dict.values(), axis=1, keys=state_dict.keys())
 
-
         input_dict = {'head_pump_speed': head_pump_speed,
                       'PRValve_dp': PRValve_dp,
                       'TCValve_throttle': TCValve_throttle,
@@ -125,22 +121,15 @@ def get_data(file_list, narx_horizon):
 
         sys_inputs = pd.concat(input_dict.values(), axis=1, keys=input_dict.keys())
 
-        aux_output_dict = {'pump_energy': pump_energy,}
+        aux_output_dict = {'pump_energy': pump_energy, }
 
         aux_outputs = pd.concat(aux_output_dict.values(), axis=1, keys=aux_output_dict.keys())
-
 
         """
         --------------------------------------------------
         Data Pre-Processing: 03 - Neural Network I/O
         --------------------------------------------------
         """
-        sys_states_next = sys_states.shift(-1, axis=0)
-
-        nn_output_dict = {'sys_states': sys_states_next,
-                        'aux_outputs': aux_outputs}
-
-        nn_output = pd.concat(nn_output_dict.values(), axis=1, keys=nn_output_dict.keys())
 
         nn_input_dict = {'sys_states': sys_states,
                          'sys_inputs': sys_inputs}
@@ -155,6 +144,15 @@ def get_data(file_list, narx_horizon):
             arx_input = pd.concat(arx_input, keys=np.arange(narx_horizon), names=['NARX', 'type', 'name', 'index'], axis=1)
             nn_input = arx_input
 
+        if narx_output:
+            nn_output = nn_input.shift(-1, axis=0)
+        else:
+            sys_states_next = sys_states.shift(-1, axis=0)
+
+            nn_output_dict = {'sys_states': sys_states_next,
+                              'aux_outputs': aux_outputs}
+
+            nn_output = pd.concat(nn_output_dict.values(), axis=1, keys=nn_output_dict.keys())
 
         # Filter nan:
         output_filter = nn_output.isnull().any(axis=1)
