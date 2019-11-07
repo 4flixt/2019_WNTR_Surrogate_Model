@@ -12,14 +12,13 @@ sys.path.append('../')
 from testWN import testWN as twm
 
 
-def get_data(file_list, narx_horizon, narx_output=False):
+def get_data(file_list, narx_horizon, narx_input=True, narx_output=False, return_lists=False):
     """
     --------------------------------------------------
     Get network informations
     --------------------------------------------------
     """
-
-    inp_file = '../Code/c-town_true_network_simplified_controls.inp'
+    inp_file = '/home/ffiedler/Documents/git_repos/2019_WNTR_Surrogate_Model/Code/c-town_true_network_simplified_controls.inp'
     ctown = twm(inp_file)
     nw_node_df = pd.DataFrame(ctown.wn.nodes.todict())
     nw_link_df = pd.DataFrame(ctown.wn.links.todict())
@@ -134,9 +133,9 @@ def get_data(file_list, narx_horizon, narx_output=False):
         nn_input_dict = {'sys_states': sys_states,
                          'sys_inputs': sys_inputs}
 
-        nn_input = pd.concat(nn_input_dict.values(), axis=1, keys=nn_input_dict.keys())
+        nn_input = pd.concat(nn_input_dict.values(), axis=1, keys=nn_input_dict.keys(), names=['type', 'name', 'index'])
 
-        if True:
+        if narx_input:
             arx_input = []
             for i in range(narx_horizon):
                 arx_input.append(nn_input.shift(i, axis=0))
@@ -171,4 +170,7 @@ def get_data(file_list, narx_horizon, narx_output=False):
     nn_input_concat = pd.concat(nn_input_list, axis=0)
     nn_output_concat = pd.concat(nn_output_list, axis=0)
 
-    return nn_input_concat, nn_output_concat
+    if return_lists:
+        return nn_input_list, nn_output_list
+    else:
+        return nn_input_concat, nn_output_concat
