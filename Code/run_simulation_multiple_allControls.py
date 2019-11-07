@@ -105,7 +105,7 @@ for i in range(150): # Number of simulations
             if np.isin(control_components[j], ctown.wn.head_pump_name_list): #is a head pump
                 act = controls.ControlAction(currComp, 'setting', control_matrix[t,j])
                 act1 = controls.ControlAction(currComp, 'status', 1)
-                ctrl = controls.Rule(cond,[act,act1], name="control_components_%s_%s" % (control_components[j],t))
+                ctrl = controls.Rule(cond,[act1,act], name="control_components_%s_%s" % (control_components[j],t))
             elif np.isin(control_components[j], ctown.wn.valve_name_list): #is a valve
                 act = controls.ControlAction(currComp, 'setting', control_matrix[t,j])
                 ctrl = controls.Control(cond,act, name="control_components_%s_%s" % (control_components[j],t))
@@ -128,4 +128,3 @@ for i in range(150): # Number of simulations
         f.close()
 
     print('Total simulation time: %.3f s' % (time.time()-start_time))
-
