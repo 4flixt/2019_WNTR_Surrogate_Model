@@ -12,7 +12,7 @@ sys.path.append('../')
 from testWN import testWN as twm
 
 
-def get_data(file_list, narx_horizon, narx_input=True, narx_output=False, return_lists=False):
+def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_input=True, narx_output=False, return_lists=False):
     """
     --------------------------------------------------
     Get network informations
@@ -32,9 +32,12 @@ def get_data(file_list, narx_horizon, narx_input=True, narx_output=False, return
     --------------------------------------------------
     """
 
-    # Get clusters
-    cluster_labels = pd.read_json('cluster_labels.json')
-    pressure_factor = pd.read_json('pressure_factor.json')
+    # For Legacy reasons: Check the name of the pressure clusters in cluster_labels:
+    if 'pressure' in cluster_labels.index.tolist():
+        cl_ind_press = 'pressure'
+    else:
+        cl_ind_press = 'pressure_cluster'
+
     n_clusters = 30
 
     nn_input_list = []
@@ -49,15 +52,15 @@ def get_data(file_list, narx_horizon, narx_input=True, narx_output=False, return
         # Scale junction pressure
         junction_pressure_scaled = results.node['pressure'][node_names[2]]/pressure_factor.to_numpy()
 
-        jun_cl_press = junction_pressure_scaled.groupby(cluster_labels.loc['pressure'], axis=1)
+        jun_cl_press = junction_pressure_scaled.groupby(cluster_labels.loc[cl_ind_press], axis=1)
         jun_cl_press_mean = jun_cl_press.mean()
         jun_cl_press_std = jun_cl_press.std()
 
-        jun_cl_demand = results.node['demand'][node_names[2]].groupby(cluster_labels.loc['pressure'], axis=1)
+        jun_cl_demand = results.node['demand'][node_names[2]].groupby(cluster_labels.loc[cl_ind_press], axis=1)
         jun_cl_demand_sum = jun_cl_demand.sum()
 
         #             quality from Results  | for all junctions | difference  | group by the quality cluster |  create the mean / standard deviation
-        jun_cl_qual = results.node['quality'][node_names[2]].diff(axis=0).groupby(cluster_labels.loc['quality'], axis=1)
+        jun_cl_qual = results.node['quality'][node_names[2]].diff(axis=0).groupby(cluster_labels.loc[cl_ind_press], axis=1)
         qual_cl_qual_mean = jun_cl_qual.mean()
         qual_cl_qual_std = jun_cl_qual.std()
 
