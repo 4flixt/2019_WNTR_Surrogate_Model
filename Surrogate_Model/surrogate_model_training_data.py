@@ -48,6 +48,12 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
         with open(file, 'rb') as f:
             results = pickle.load(f)
 
+        """ Downsampling """
+        n_sampl = 4
+        sampl_ind = np.arange(0, len(results.node['pressure'].index), 4)
+        results.node = {key: val.iloc[sampl_ind] for key, val in results.node.items()}
+        results.link = {key: val.iloc[sampl_ind] for key, val in results.link.items()}
+
         """ Junctions """
         # Scale junction pressure
         junction_pressure_scaled = results.node['pressure'][node_names[2]]/pressure_factor.to_numpy()
@@ -84,6 +90,8 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
         # https://wntr.readthedocs.io/en/latest/apidoc/wntr.network.elements.html#wntr.network.elements.HeadPump
         # The setting for head pump is alias for normalized speed (usually in the range of 0-1)
         head_pump_speed = results.link['setting'][nw_link_df.keys()[nw_link_df.loc['link_type'] == 'Pump']]
+        head_pump_status = results.link['status'][nw_link_df.keys()[nw_link_df.loc['link_type'] == 'Pump']]
+        head_pump_speed_corr = head_pump_speed*head_pump_status
 
         pump_energy = economics.pump_energy(results.link['flowrate'], results.node['head'], ctown.wn)[link_names[0]]
         pump_energy /= 1000
@@ -116,10 +124,11 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
 
         sys_states = pd.concat(state_dict.values(), axis=1, keys=state_dict.keys())
 
-        input_dict = {'head_pump_speed': head_pump_speed,
-                      'PRValve_dp': PRValve_dp,
-                      'TCValve_throttle': TCValve_throttle,
-                      'jun_cl_demand_sum': jun_cl_demand_sum}
+        input_dict = {  # 'head_pump_speed': head_pump_speed,
+            'head_pump_speed': head_pump_speed_corr,
+            'PRValve_dp': PRValve_dp,
+            'TCValve_throttle': TCValve_throttle,
+            'jun_cl_demand_sum': jun_cl_demand_sum}
 
         sys_inputs = pd.concat(input_dict.values(), axis=1, keys=input_dict.keys())
 

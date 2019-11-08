@@ -39,13 +39,11 @@ def get_model(n_in, n_out, n_layer, n_units, l1_regularizer=0, **kwargs):
     return model
 
 
-n_units_list = [40, 70, 100]
-n_layer_list = [1, 2, 3, 4]
+n_units_list = [70]
+n_layer_list = [2]
 l_1_list = [0]
 training_data_list = [
-    'training_setup_narx4.pkl',
-    'training_setup_narx5.pkl',
-    'training_setup_narx6.pkl'
+    '02_training_setup_narx4.pkl',
 ]
 
 combinations = list(itertools.product(training_data_list, n_units_list, n_layer_list, l_1_list))
@@ -74,24 +72,9 @@ for i, case_i in comb_df.iterrows():
         X_test = data['X_test']
         Y_test = data['Y_test']
 
-        x_offset = X_train.mean()
-        X_train_centered = X_train - x_offset
-        x_scaling = X_train_centered.abs().max()
-        x_scaling.loc[x_scaling < 1e-5] = 1e-5
-
-        X_train_scaled_centered = X_train_centered/x_scaling
-        X_test_scaled_centered = (X_test - x_offset)/x_scaling
-
-        y_offset = Y_train.mean()
-        Y_train_centered = Y_train - y_offset
-        y_scaling = Y_train_centered.abs().max()
-        y_scaling.loc[y_scaling < 1e-5] = 1e-5
-
-        Y_train_scaled_centered = Y_train_centered/y_scaling
-        Y_test_scaled_centered = (Y_test-y_offset)/y_scaling
-
         n_in = X_train.shape[1]
         n_out = Y_train.shape[1]
+        pdb.set_trace()
 
         model = get_model(n_in, n_out, int(case_i['n_layers']), int(case_i['n_units']), case_i['l1_regularizer'])
 
@@ -100,11 +83,11 @@ for i, case_i in comb_df.iterrows():
         model.compile(optimizer=optim,
                       loss='mse')
 
-        history = model.fit(X_train_scaled_centered.to_numpy(),
-                            Y_train_scaled_centered.to_numpy(),
+        history = model.fit(X_train.to_numpy(),
+                            Y_train.to_numpy(),
                             batch_size=20000,
                             epochs=10000,
-                            validation_data=(X_test_scaled_centered.to_numpy(), Y_test_scaled_centered.to_numpy()),
+                            validation_data=(X_test.to_numpy(), Y_test.to_numpy()),
                             callbacks=[callback])
 
         loss = history.history['loss'][-1]
@@ -114,14 +97,6 @@ for i, case_i in comb_df.iterrows():
 
         model_name = '{:03d}_model_01'.format(i)
         model.save(model_path+model_name+'.h5')
-        model_aux = {
-            'x_scaling': x_scaling,
-            'x_offset': x_offset,
-            'y_scaling': y_scaling,
-            'y_offset': y_offset
-        }
-        with open(model_path+model_name+'_aux.pkl', 'wb') as f:
-            pickle.dump(model_aux, f)
     except:
         print('couldnt train for case {}'.format(i))
 
