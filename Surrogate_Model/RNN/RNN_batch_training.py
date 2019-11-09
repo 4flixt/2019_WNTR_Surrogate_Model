@@ -24,8 +24,8 @@ from surrogate_model_training_data import get_data
 
 model_path = './models/'
 
-cluster_labels = pd.read_json('150sim_cluster_labels.json')
-pressure_factor = pd.read_json('150sim_pressure_factor.json')
+cluster_labels = pd.read_json('cluster_labels_dt1h.json')
+pressure_factor = pd.read_json('pressure_factor_dt1h.json')
 n_clusters = 30
 
 
