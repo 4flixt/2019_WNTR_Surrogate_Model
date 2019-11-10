@@ -30,7 +30,7 @@ n_clusters = 30
 
 
 # Get results:
-data_path = '/home/ffiedler/tubCloud/Shared/WDN_SurrogateModels/_RESULTS/150sim/'
+data_path = '/home/ubuntu/gitrepos/Results/150sim_1hourSampling/'
 file_list = os.listdir(data_path)
 file_list = [data_path+file_i for file_i in file_list if '.pkl' in file_i]
 nn_input_list, nn_output_list = get_data(file_list, 0, cluster_labels, pressure_factor,
@@ -87,7 +87,7 @@ ny = Y.shape[2]
 
 
 """ Setup batch training: """
-n_units_dense_list = [20, 50, 80]
+n_units_dense_list = [20, 50, 80, 120]
 n_layer_dense_list = [2, 3, 4, 5]
 n_activation_list = [20, 50, 80]
 
@@ -124,7 +124,7 @@ for i, case_i in comb_df.iterrows():
     cb_reset = keras.callbacks.LambdaCallback(on_epoch_end=model.reset_states())
     cb_stopping = keras.callbacks.EarlyStopping(monitor='loss', min_delta=1e-7, patience=10, mode='min')
     history = model.fit(X, Y, callbacks=[cb_reset], batch_size=batch_size,
-                        epochs=5000, verbose=1, shuffle=False)
+                        epochs=10000, verbose=1, shuffle=False)
 
     loss = history.history['loss'][-1]
     comb_df.loc[i, 'loss'] = loss

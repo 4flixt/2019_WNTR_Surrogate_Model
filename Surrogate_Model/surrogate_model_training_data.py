@@ -18,7 +18,7 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
     Get network informations
     --------------------------------------------------
     """
-    inp_file = '/home/ffiedler/Documents/git_repos/2019_WNTR_Surrogate_Model/Code/c-town_true_network_simplified_controls.inp'
+    inp_file = '../../Code/c-town_true_network_simplified_controls.inp'
     ctown = twm(inp_file)
     nw_node_df = pd.DataFrame(ctown.wn.nodes.todict())
     nw_link_df = pd.DataFrame(ctown.wn.links.todict())
@@ -159,8 +159,10 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
             nn_output = nn_input.shift(-1, axis=0)
         else:
             sys_states_next = sys_states.shift(-1, axis=0)
-
-            nn_output_dict = {'sys_states': sys_states_next,
+            dsys_states = sys_states.diff(axis=0)
+            dsys_states_next = sys_states.shift(-1,axis=0)
+            nn_output_dict = {#'sys_states': sys_states_next,
+			      'sys_states' : dsys_states_next,
                               'aux_outputs': aux_outputs}
 
             nn_output = pd.concat(nn_output_dict.values(), axis=1, keys=nn_output_dict.keys())

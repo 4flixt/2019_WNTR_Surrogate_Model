@@ -5,7 +5,10 @@ import pickle
 import pdb
 import os
 from tensorflow import keras
-from casadi import *
+try:
+    from casadi import *
+except:
+    print('casadi could not be imported')
 
 
 # TODO : Bias propagation is not properly implemented for all cases
