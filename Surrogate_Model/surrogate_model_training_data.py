@@ -18,7 +18,7 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
     Get network informations
     --------------------------------------------------
     """
-    inp_file = '../../Code/c-town_true_network_simplified_controls.inp'
+    inp_file = '../Code/c-town_true_network_simplified_controls.inp'
     ctown = twm(inp_file)
     nw_node_df = pd.DataFrame(ctown.wn.nodes.todict())
     nw_link_df = pd.DataFrame(ctown.wn.links.todict())
@@ -47,12 +47,6 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
         # Get results
         with open(file, 'rb') as f:
             results = pickle.load(f)
-
-        """ Downsampling """
-        n_sampl = 4
-        sampl_ind = np.arange(0, len(results.node['pressure'].index), 4)
-        results.node = {key: val.iloc[sampl_ind] for key, val in results.node.items()}
-        results.link = {key: val.iloc[sampl_ind] for key, val in results.link.items()}
 
         """ Junctions """
         # Scale junction pressure
@@ -110,17 +104,17 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
         --------------------------------------------------
         """
         # TODO: Reservoir?
-        state_dict = {'jun_cl_press_mean': jun_cl_press_mean,
-                      # 'jun_cl_press_std': jun_cl_press_std,
-                      # 'dqual_cl_press_mean': dqual_cl_press_mean,
-                      # 'dqual_cl_press_std': dqual_cl_press_std,
-                      'tank_press': tank_press,
-                      # 'tank_level': tank_level,
-                      # 'tank_qual': tank_qual,
-                      # 'reservoir_press': reservoir_press,
-                      # 'reservoir_level': reservoir_level,
-                      # 'reservoir_qual': reservoir_qual,
-                      }
+        state_dict = {  # 'jun_cl_press_mean': jun_cl_press_mean,
+            # 'jun_cl_press_std': jun_cl_press_std,
+            # 'dqual_cl_press_mean': dqual_cl_press_mean,
+            # 'dqual_cl_press_std': dqual_cl_press_std,
+            'tank_press': tank_press,
+            # 'tank_level': tank_level,
+            # 'tank_qual': tank_qual,
+            # 'reservoir_press': reservoir_press,
+            # 'reservoir_level': reservoir_level,
+            # 'reservoir_qual': reservoir_qual,
+        }
 
         sys_states = pd.concat(state_dict.values(), axis=1, keys=state_dict.keys())
 
@@ -132,7 +126,8 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
 
         sys_inputs = pd.concat(input_dict.values(), axis=1, keys=input_dict.keys())
 
-        aux_output_dict = {'pump_energy': pump_energy, }
+        aux_output_dict = {'pump_energy': pump_energy,
+                           'jun_cl_press_mean': jun_cl_press_mean, }
 
         aux_outputs = pd.concat(aux_output_dict.values(), axis=1, keys=aux_output_dict.keys())
 
@@ -160,10 +155,10 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
         else:
             sys_states_next = sys_states.shift(-1, axis=0)
             dsys_states = sys_states.diff(axis=0)
-            dsys_states_next = sys_states.shift(-1,axis=0)
-            nn_output_dict = {#'sys_states': sys_states_next,
-			      'sys_states' : dsys_states_next,
-                              'aux_outputs': aux_outputs}
+            dsys_states_next = dsys_states.shift(-1, axis=0)
+            nn_output_dict = {  # 'sys_states': sys_states_next,
+                'sys_states': dsys_states_next,
+                'aux_outputs': aux_outputs}
 
             nn_output = pd.concat(nn_output_dict.values(), axis=1, keys=nn_output_dict.keys())
 
