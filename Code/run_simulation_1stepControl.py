@@ -11,6 +11,7 @@ from testWN import testWN as twm
 import wntr
 import wntr.network.controls as controls
 import wntr.metrics.economic as economics
+
 import pickle
 import random
 import inefficient
@@ -20,15 +21,15 @@ inp_file = '../Code/c-town_true_network_simplified_controls.inp'
 ctown = twm(inp_file)
 
 #%% ::: Setting up time and options for simulation
-nDaysSim = 7
+nDaysSim = 30
 nHourDay =24
-simTimeSteps =nDaysSim*nHourDay*4 # Sampling frequency of 15 min
+simTimeSteps =nDaysSim*nHourDay # Sampling frequency of 15 min
     
 controlTvary = 8 # Number of time steps for varying controls (if set to 8 -> controls are stable for 2 hours)
 
-ctown.wn.options.time.hydraulic_timestep = 60*15  # 15 min
-ctown.wn.options.time.quality_timestep = 60*15  # 15 min
-ctown.wn.options.time.report_timestep = 60*15
+ctown.wn.options.time.hydraulic_timestep = 3600  # 1 hr
+ctown.wn.options.time.quality_timestep = 3600  # 1 hr
+ctown.wn.options.time.report_timestep = 3600
 ctown.wn.options.quality.mode = 'AGE'
 ctown.wn.options.results.energystr = True  
 ctown.wn.options.time.duration = 0
@@ -56,12 +57,13 @@ for t in range(simTimeSteps):
         ctown.wn.reset_initial_values()
         ctown = twm(tempInpFile)
         # Setting simulation options
-        ctown.wn.options.time.hydraulic_timestep = 60*15  # 15 min
-        ctown.wn.options.time.quality_timestep = 60*15  # 15 min
-        ctown.wn.options.time.report_timestep = 60*15
+        ctown.wn.options.time.hydraulic_timestep = 3600  # 1 hr
+        ctown.wn.options.time.quality_timestep = 3600  # 1 hr
+        ctown.wn.options.time.report_timestep = 3600
         ctown.wn.options.quality.mode = 'AGE'
         ctown.wn.options.results.energystr = True  
-        ctown.wn.options.time.duration = t*900
+        ctown.wn.options.time.duration = 0
+        ctown.wn.options.time.duration = t*3600
     
     # ::: Adding control for current step
     # ::::::::::::::::::::::::::::::::::::::
@@ -69,8 +71,12 @@ for t in range(simTimeSteps):
     for el in range(len(control_vector)):
         control_vector[el] = random.uniform(min_control[el], max_control[el])   #TODO: modify. Now it is random      
     # ::::::::::::::::::::::::::::::::::::::    
-    
     ctown.control_action(control_components, control_vector, t, ctown.wn.options.time.hydraulic_timestep)
+    
+    # Forecasting water demand for the next k steps
+    k = 24 # Time horizon for water demand prediction
+    startT = t+1
+    demand_pred = ctown.forecast_demand_gnoise(k, startT*ctown.wn.options.time.hydraulic_timestep, ctown.wn.options.time.hydraulic_timestep)
     
     # ::: Running the simulation
     start_time = time.time()
@@ -79,6 +85,7 @@ for t in range(simTimeSteps):
     sim = wntr.sim.EpanetSimulator(ctown.wn)
     results = sim.run_sim()
     results.tankLevels = results.node['head'][nodeNames[0]]-tankEl
+    results.energy = economics.pump_energy(results.link['flowrate'], results.node['head'], ctown.wn)
     
     # ::: Saving simulation output
     tempInpFile = "tempResults/tempInpFile_time%s.inp" % t

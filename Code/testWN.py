@@ -14,6 +14,7 @@ import wntr
 import functools
 import pickle
 import wntr.network.controls as controls
+import wntr.metrics.hydraulic as hydraulics
 import random
 from random import uniform as rnd
 import pdb
@@ -83,7 +84,6 @@ class testWN:
     def control_action(self, control_components, control_vector, currTime, timeStepSize):
         '''
         add control action to the current simulation step
-        : rtype: list contains three different node types
         ''' 
         for j in range(len(control_components)): # Iterate over controls
             currComp = self.wn.get_link(control_components[j])
@@ -96,3 +96,14 @@ class testWN:
                 act = controls.ControlAction(currComp, 'setting', control_vector[j])
                 ctrl = controls.Control(cond,act, name="control_components_%s_%s" % (control_components[j],currTime))
             self.wn.add_control("control_components_%s_%s" % (control_components[j],currTime), ctrl)
+
+    def forecast_demand_gnoise(self, k, startT, timeStep):
+        '''
+        forecast node demand starting from time startT for the next k timesteps
+        ''' 
+        forecasted_demand = hydraulics.expected_demand(self.wn, start_time =startT, end_time = timeStep*k, timestep = timeStep)
+        # Adding noise
+        noise = np.random.normal(0,np.mean(np.std(forecasted_demand))*0.10,np.shape(forecasted_demand))
+        forecasted_demand_noisy = forecasted_demand + noise
+        return forecasted_demand
+        
