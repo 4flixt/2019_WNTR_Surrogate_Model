@@ -122,15 +122,45 @@ class go_mhe:
         model: define constraints
         --------------------------------------------------------------------------
         """
-        self.nl_cons = [
-            vertcat(jun_cl_press_min-50,
-                    pump_energy
-                    )]
-        self.nl_ub = np.inf*np.ones((35, 1))
-        self.nl_lb = np.zeros((35, 1))
+        # For states
+        self.x_lb = x(0)
+        self.x_ub = x(15)
+        # Terminal constraints
+        self.x_terminal_lb = x(0)
+        self.x_terminal_ub = x(15)
 
-        assert type(self.nl_cons) == list, 'nl_cons must be a list. Can be left empty if not used.'
-        self.nl_cons_fun = Function('nl_cons', [x, u, tvp, p_set], self.nl_cons)
+        # Inputs
+        self.u_lb = u(0)
+        self.u_ub = u(1)
+        self.u_ub['head_pump'] = 2
+        self.u_ub['PRValve'] = 600
+        self.u_ub['TCValve'] = 80
+
+        # Further (non-linear) constraints:
+        self.nl_cons = struct_MX([
+            entry('jun_cl_press_min', expr=jun_cl_press_min),
+            entry('pump_energy', expr=pump_energy)
+        ])
+
+        self.nl_ub = self.nl_cons(np.inf)
+        self.nl_lb = self.nl_cons(0)
+
+        self.nl_lb['jun_cl_press_min'] = 50
+
+        self.nl_cons_fun = Function('nl_cons', [x, u, tvp, p_set], [self.nl_cons])
+
+        """
+        --------------------------------------------------------------------------
+        model: define cost function
+        --------------------------------------------------------------------------
+        """
+        lterm = sum1(pump_energy)
+        mterm = 0
+        rterm = 0
+
+        self.lterm_fun = Function('lterm', [x, u, tvp, p_set], [lterm])
+        self.mterm_fun = Function('mterm_fun', [x], [mterm])
+        self.rterm_fun = Function('rterm_fun', [u], [rterm])
 
         self.model_vars = {
             'x_mhe': x,
@@ -149,7 +179,6 @@ class go_mhe:
         self.obj_x = obj_x = struct_symMX([
             entry('x', repeat=self.n_horizon+1, struct=self.x),
             entry('u', repeat=self.n_horizon, struct=self.u),
-            entry('p_est', struct=self.p_est)
         ])
 
         # Number of optimization variables:
@@ -158,12 +187,12 @@ class go_mhe:
         # Create struct for optimization parameters:
         self.obj_p = obj_p = struct_symMX([
             entry('x_0', struct=self.x),
-            entry('p_0', struct=self.p_est),
-            entry('u_meas', repeat=self.n_horizon, struct=self.u_meas),
-            entry('y_meas', repeat=self.n_horizon, struct=self.y_meas),
             entry('tvp',    repeat=self.n_horizon, struct=self.tvp),
             entry('p_set', struct=self.p_set)
         ])
+
+        self.lb_obj_x = obj_x(-np.inf)
+        self.ub_obj_x = obj_x(np.inf)
 
         # Initialize objective function and constraints
         obj = 0
@@ -171,37 +200,40 @@ class go_mhe:
         cons_lb = []
         cons_ub = []
 
-        # Arrival cost:
-        dx = (obj_p['x_0']-obj_x['x', 0])
-        obj += 0.5*dx.T@obj_p['p_set', 'P_x']@dx
-        dp = (obj_p['p_0']-obj_x['p_est'])
-        obj += 0.5*dp.T@obj_p['p_set', 'P_p']@dp
+        # Initial condition:
+        cons.append(obj_x['x', 0]-obj_p['x_0'])
+        cons_lb.append(np.zeros((self.x.shape[0], 1)))
+        cons_ub.append(np.zeros((self.x.shape[0], 1)))
 
         # Note:
         # X = [x_0, x_1, ... , x_(N+1)]         -> n_horizon+1 elements
         # U = [u_0, u_1, ... , u_N]             -> n_horizon elements
-        # Y = [y_0, y_1, ... , y_N]             -> n_horizon elements
 
         for k in range(self.n_horizon):
             # Add constraints for state equation:
-            x_next = self.x_next_fun(obj_x['x', k], obj_x['u', k], obj_x['p_est'], obj_p['tvp', k], obj_p['p_set'])
+            x_next = self.x_next_fun(obj_x['x', k], obj_x['u', k], obj_p['tvp', k], obj_p['p_set'])
 
             cons.append(x_next-obj_x['x', k+1])
             cons_lb.append(np.zeros((self.x.shape[0], 1)))
             cons_ub.append(np.zeros((self.x.shape[0], 1)))
-            if self.nl_cons:  # nl_cons is a list. Empty list == False means no further constraints are added.
-                cons.append(self.nl_cons_fun(obj_x['x', k], obj_x['u', k], obj_x['p_est'], obj_p['tvp', k], obj_p['p_set']))
-                cons_lb.append(self.nl_lb.reshape(-1, 1))
-                cons_ub.append(self.nl_ub.reshape(-1, 1))
 
-            # Add input penalty:
-            du = (obj_x['u', k]-obj_p['u_meas', k])
-            obj += 0.5*du.T@obj_p['p_set', 'P_u']@du
+            cons.append(self.nl_cons_fun(obj_x['x', k], obj_x['u', k], obj_p['tvp', k], obj_p['p_set']))
+            cons_lb.append(self.nl_lb)
+            cons_ub.append(self.nl_ub)
 
-            # Add measurement penalty:
-            y_calc = self.y_calc_fun(obj_x['x', k], obj_x['u', k], obj_x['p_est'], obj_p['tvp', k], obj_p['p_set'])
-            dy = (y_calc-obj_p['y_meas', k])
-            obj += 0.5*dy.T@obj_p['p_set', 'P_y']@dy
+            obj += self.lterm_fun(obj_x['x', k], obj_x['u', k], obj_p['tvp', k], obj_p['p_set'])
+            obj += self.rterm_fun(obj_x['u', k])
+
+            self.lb_obj_x['x', k] = self.x_lb
+            self.ub_obj_x['x', k] = self.x_ub
+
+            self.lb_obj_x['u', k] = self.u_lb
+            self.ub_obj_x['u', k] = self.u_ub
+
+        obj += self.mterm_fun(obj_x['x', k+1])
+
+        self.lb_obj_x['x', k+1] = self.x_terminal_lb
+        self.ub_obj_x['x', k+1] = self.x_terminal_ub
 
         cons = vertcat(*cons)
         self.cons_lb = vertcat(*cons_lb)
@@ -233,6 +265,8 @@ class go_mhe:
         self.obj_x_num = self.obj_x(0)
         self.obj_p_num = self.obj_p(0)
 
+        pdb.set_trace()
+
     def solve(self):
         """
         Solves the optimization problem for the given intial condition and parameter set.
@@ -241,7 +275,7 @@ class go_mhe:
 
         .solve() will print the casadi output unless deactivated.
         """
-        r = self.S(x0=self.obj_x_num, ubg=self.cons_ub, lbg=self.cons_lb, p=self.obj_p_num)
+        r = self.S(x0=self.obj_x_num, lbx=self.lb_obj_x, ubx=self.ub_obj_x,  ubg=self.cons_ub, lbg=self.cons_lb, p=self.obj_p_num)
         self.obj_x_num = self.obj_x(r['x'])
         # Values of lagrange multipliers:
         self.lam_g_num = r['lam_g']
@@ -275,46 +309,30 @@ class simulator(go_mhe):
         """
         None
 
-    def mhe_step(self):
+    def mpc_step(self):
         if self.mhe_counter == 0:
             self.config_check()
         print('---------------------------------------')
         print('MHE counter: {}'.format(self.mhe_counter))
 
-        u_real_now = self.u_real_now(self.t_0)
-        y_real_now = self.y_real_now(self.t_0)
+        x_real_now = self.x_real_now(self.t_0)
         tvp_real_now = self.tvp_real_now(self.t_0)
         t_real_now = self.t_real_now(self.t_0)
 
+        assert tvp_real_now.shape == (self.n_horizon, self.tvp.shape[0]), 'TVP has wrong shape'
         # Store data:
-        self.mhe_data.u_meas = np.append(self.mhe_data.u_meas, u_real_now.reshape(1, -1), axis=0)
-        self.mhe_data.y_meas = np.append(self.mhe_data.y_meas, y_real_now.reshape(1, -1), axis=0)
-        self.mhe_data.tvp = np.append(self.mhe_data.tvp, tvp_real_now.reshape(1, -1), axis=0)
+        self.mhe_data.x_meas = np.append(self.mhe_data.x_meas, x_real_now.reshape(1, -1), axis=0)
+        self.mhe_data.tvp = np.append(self.mhe_data.tvp, tvp_real_now[0, :].reshape(1, -1), axis=0)
         self.mhe_data.t_mhe = np.append(self.mhe_data.t_mhe, t_real_now.reshape(1, -1), axis=0)
 
-        if self.mhe_counter >= self.n_horizon-1:
-            # Set initial condition as second element of previous solution
-            self.obj_p_num['x_0'] = self.obj_x_num['x', 1]
-            # Take the last n_horizon measurements and tvp values and set them as parameters.
-            self.obj_p_num['u_meas'] = vertsplit(self.mhe_data.u_meas[-self.n_horizon:, :])
-            self.obj_p_num['y_meas'] = vertsplit(self.mhe_data.y_meas[-self.n_horizon:, :])
-            self.obj_p_num['tvp'] = vertsplit(self.mhe_data.tvp[-self.n_horizon:, :])
-            # Solve the optimization problem and populate self.obj_x_num with the new solution.
-            self.solve()
+        # Solve MPC
+        self.obj_p_num['x_0'] = self.mhe_data.x_meas[-1, :]
+        self.obj_p_num['tvp'] = vertsplit(self.mhe_data.tvp[-self.n_horizon:, :])
+        # Solve the optimization problem and populate self.obj_x_num with the new solution.
+        self.solve()
 
-        if self.mhe_counter == self.n_horizon-1:
-            # If the optimization runs for the first time, store the entire solution of x and u.
-            self.mhe_data.x_mhe = np.append(self.mhe_data.x_mhe, horzcat(*self.obj_x_num['x', :]).T.full(), axis=0)
-            self.mhe_data.u_mhe = np.append(self.mhe_data.u_mhe, horzcat(*self.obj_x_num['u', :]).T.full(), axis=0)
-        elif self.mhe_counter > self.n_horizon-1:
-            # If the optimization runs again, store only the most recent value of x and u.
-            self.mhe_data.x_mhe = np.append(self.mhe_data.x_mhe, self.obj_x_num['x', -1].T.full(), axis=0)
-            self.mhe_data.u_mhe = np.append(self.mhe_data.u_mhe, self.obj_x_num['u', -1].T.full(), axis=0)
-        # Store the current values of the estimated parameters at every iteration (the intial guess for the first n_horizon iterations)
-        self.mhe_data.p_mhe = np.append(self.mhe_data.p_mhe, self.obj_x_num['p_est'].T.full(), axis=0)
-
-        y_calc_now = self.y_calc_now(self.mhe_counter)
-        self.mhe_data.y_calc = np.append(self.mhe_data.y_calc, y_calc_now.reshape(1, -1), axis=0)
+        # Save solution
+        self.mhe_data.u_mhe = np.append(self.mhe_data.u_mhe, horzcat(*self.obj_x_num['u', :]).T.full(), axis=0)
 
         self.mhe_counter += 1
         self.t_0 += self.t_step
