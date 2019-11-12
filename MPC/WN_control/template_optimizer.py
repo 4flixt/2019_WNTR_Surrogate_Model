@@ -34,17 +34,17 @@ def optimizer(model):
     """
 
     # Prediction horizon
-    n_horizon = 20
+    n_horizon = 10
     # Robust horizon, set to 0 for standard NMPC
     n_robust = 0
     # open_loop robust NMPC (1) or multi-stage NMPC (0). Only important if n_robust > 0
     open_loop = 0
     # Sampling time
-    t_step = 0.005
+    t_step = 3600
     # Simulation time
-    t_end = 0.2
+    t_end = 100*t_step
     # Choose type of state discretization (collocation, multiple-shooting or discrete-time)
-    state_discretization = 'collocation'
+    state_discretization = 'discrete-time'
     # Degree of interpolating polynomials: 1 to 5
     poly_degree = 2
     # Collocation points: 'legendre' or 'radau'

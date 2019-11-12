@@ -209,7 +209,7 @@ class configuration:
         nlp_dict_out = setup_nlp.setup_nlp(self.model, self.optimizer)
         # Set options
         opts = {}
-        opts["expand"] = True
+        opts["expand"] = False
         opts["ipopt.linear_solver"] = self.optimizer.linear_solver
         # NOTE: this could be passed as parameters of the optimizer class
         opts["ipopt.max_iter"] = 500
