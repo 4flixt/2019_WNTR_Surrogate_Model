@@ -14,7 +14,6 @@ import wntr.metrics.economic as economics
 
 import pickle
 import random
-import inefficient
 
 #%% ::: Loading .inp file
 inp_file = '../Code/c-town_true_network_simplified_controls.inp'
@@ -76,7 +75,8 @@ for t in range(simTimeSteps):
     # Forecasting water demand for the next k steps
     k = 24 # Time horizon for water demand prediction
     startT = t+1
-    demand_pred = ctown.forecast_demand_gnoise(k, startT*ctown.wn.options.time.hydraulic_timestep, ctown.wn.options.time.hydraulic_timestep)
+    addNoise = True
+    demand_pred = ctown.forecast_demand_gnoise(k, startT*ctown.wn.options.time.hydraulic_timestep, ctown.wn.options.time.hydraulic_timestep, addNoise)
     
     # ::: Running the simulation
     start_time = time.time()
@@ -96,3 +96,4 @@ for t in range(simTimeSteps):
     
     print('Total simulation time: %.3f s' % (time.time()-start_time))  
    
+    

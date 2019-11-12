@@ -97,13 +97,14 @@ class testWN:
                 ctrl = controls.Control(cond,act, name="control_components_%s_%s" % (control_components[j],currTime))
             self.wn.add_control("control_components_%s_%s" % (control_components[j],currTime), ctrl)
 
-    def forecast_demand_gnoise(self, k, startT, timeStep):
+    def forecast_demand_gnoise(self, k, startT, timeStep, addNoise):
         '''
         forecast node demand starting from time startT for the next k timesteps
         ''' 
-        forecasted_demand = hydraulics.expected_demand(self.wn, start_time =startT, end_time = timeStep*k, timestep = timeStep)
+        forecasted_demand = hydraulics.expected_demand(self.wn, start_time =startT, end_time = timeStep*(k-1)+startT, timestep = timeStep)
         # Adding noise
-        noise = np.random.normal(0,np.mean(np.std(forecasted_demand))*0.10,np.shape(forecasted_demand))
-        forecasted_demand_noisy = forecasted_demand + noise
+        if addNoise is True:
+            noise = np.random.normal(0,np.mean(np.std(forecasted_demand))*0.10,np.shape(forecasted_demand))
+            forecasted_demand = forecasted_demand + noise
         return forecasted_demand
         
