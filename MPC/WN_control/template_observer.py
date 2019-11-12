@@ -23,18 +23,20 @@
 
 from casadi import *
 import core_do_mpc
+
+
 def observer(model):
 
-	# Full state feedback
-	observer_dict = {'x':1}
-	observer = core_do_mpc.observer(model,observer_dict)
-	# here some functions depending on observer_1
+    # Full state feedback
+    observer_dict = {'x': 1}
+    observer = core_do_mpc.observer(model, observer_dict)
+    # here some functions depending on observer_1
 
-	# Implement here your own observer
+    # Implement here your own observer
 
-	"""
+    """
 	--------------------------------------------------------------------------
 	template_observer: pass information (not necessary to edit)
 	--------------------------------------------------------------------------
 	"""
-	return observer
+    return observer

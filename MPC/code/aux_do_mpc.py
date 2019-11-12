@@ -22,6 +22,4 @@
 #
 
 
-
-
 # TODO: here also add the automatic checking of the collocation accuracy and the calculation of a good initial condition
