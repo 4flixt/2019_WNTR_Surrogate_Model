@@ -7,6 +7,10 @@ import pandas as pd
 import numpy as np
 
 import time
+
+import sys
+sys.path.append('../../Code/')
+
 from testWN import testWN as twm
 import wntr
 import wntr.network.controls as controls
@@ -18,7 +22,7 @@ import pdb
 
 
 # %% ::: Loading .inp file
-inp_file = '../Code/c-town_true_network_simplified_controls.inp'
+inp_file = '../../Code/c-town_true_network_simplified_controls.inp'
 ctown = twm(inp_file)
 
 # %% ::: Setting up time and options for simulation
@@ -46,6 +50,11 @@ nodeNames = ctown.getNodeName()
 control_components = ctown.wn.pump_name_list + ctown.wn.valve_name_list
 min_control = np.array([0., 0., 0., 0., 0., 0., 0., 0., 0.])  # Lower bondary for controls
 max_control = np.array([2., 2., 2., 2., 2., 600.0, 600.0, 600.0, 70.])  # Upper bondary for controls
+
+# Load clustering information:
+nn_model_path = './model/002_man_4x80/'
+cluster_labels = pd.read_json(nn_model_path+'cluster_labels_dt1h.json')
+pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h.json')
 
 # %% ::: Simulation with updated controls at each time step
 for t in range(simTimeSteps):
@@ -76,9 +85,10 @@ for t in range(simTimeSteps):
 
     # Forecasting water demand for the next k steps
     k = 24  # Time horizon for water demand prediction
-    startT = t+1
-    addNoise = True
+    startT = t
+    addNoise = False
     demand_pred = ctown.forecast_demand_gnoise(k, startT*ctown.wn.options.time.hydraulic_timestep, ctown.wn.options.time.hydraulic_timestep, addNoise)
+    demand_pred_cl = demand_pred.groupby(cluster_labels.loc['pressure_cluster'], axis=1).sum()
     pdb.set_trace()
     # ::: Running the simulation
     start_time = time.time()
