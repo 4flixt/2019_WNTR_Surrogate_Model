@@ -8,6 +8,8 @@ from casadi.tools import *
 import pdb
 import warnings
 import pickle
+import pandas as pd
+from tensorflow import keras
 
 
 class go_mhe:
@@ -21,54 +23,75 @@ class go_mhe:
     def create_model(self):
         """
         --------------------------------------------------------------------------
+        template_model: Load the neural network system model
+        --------------------------------------------------------------------------
+        """
+        nn_model_path = './model/002_man_4x80/'
+        nn_model_name = '002_man_4x80.h5'
+
+        keras_model = keras.models.load_model(nn_model_path+nn_model_name)
+        print('----------------------------------------------------')
+        print('Loaded Keras model with the following architecture:')
+        print(keras_model.summary())
+
+        weights = keras_model.get_weights()
+        config = keras_model.get_config()
+
+        with open(nn_model_path+'train_data_param_unfiltered.pkl', 'rb') as f:
+            train_data_param = pickle.load(f)
+
+        print('----------------------------------------------------')
+        print('Loaded input and output scaling for the Keras model')
+        input_scaling = train_data_param['input_scaling']
+        output_scaling = train_data_param['output_scaling']
+
+        # with open(nn_model_path+'io_scheme.pkl', 'rb') as f:
+        #     io_scheme = pickle.load(f)
+
+        # Check if Keras and casadi return the same thing:
+        # nn_in_test = np.ones((1, 46))
+        # keras_out = keras_model.predict(nn_in_test)
+        # cas_out = dense_nn(weights, config, nn_in_test)
+        # print('Difference between CasADi and Keras Neural Network evaluation (with input all ones).')
+        # print(keras_out-cas_out)
+        # pdb.set_trace()
+
+        # Load the cluster labels and the pressure factors and determine the smallest factor for each cluster.
+        # For a given mean value of the normalized cluster pressure, this will determine the smallest physical pressure in the cluster
+        cluster_labels = pd.read_json(nn_model_path+'cluster_labels_dt1h.json')
+        pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h.json')
+
+        jun_cl_press_fac_min = pressure_factor.groupby(cluster_labels.loc['pressure_cluster'], axis=1).min()
+
+        """
+        --------------------------------------------------------------------------
         model: define parameters, states and controls as symbols
         --------------------------------------------------------------------------
         """
         # States struct (optimization variables):
-        self.x = x = struct_symSX([
-            # IMU states:
-            entry('LTI_x', shape=(8, 1)),
+        self.x = x = struct_symMX([
+            entry('tank_press', shape=(7, 1)),
         ])
 
         # Input struct (optimization variables):
-        self.u = u = struct_symSX([
-            # IMU inputs (pre-integrated measurements):
-            entry('pos_mot_1', shape=(1, 1)),          # position motor left
-            entry('pos_mot_2', shape=(1, 1)),          # position motor right
+        self.u = u = struct_symMX([
+            entry('head_pump', shape=(5, 1)),
+            entry('PRValve', shape=(3, 1)),
+            entry('TCValve', shape=(1, 1)),
         ])
 
-        # Estimated parameters struct (optimization variables):
-        self.p_est = p_est = struct_symSX([
-            entry('mot_1_offset', shape=(1, 1)),       # offset motor left
-            entry('mot_2_offset', shape=(1, 1)),       # offset motor right
-        ])
-
-        # Measured input (possibly with noise and/or bias etc.)
-        # (parameters for optimization problem):
-        self.u_meas = u_meas = struct_symSX(u)
-
-        # Output measurement struct (parameters for optimization problem):
-        self.y_meas = y_meas = struct_symSX([
-            entry('disc_angle', shape=(3, 1)),       # angle disc 1,2,3
+        # time-varying parameter struct (parameters for optimization problem):
+        self.tvp = tvp = struct_symMX([
+            entry('jun_cl_demand_sum', shape=(30, 1)),
         ])
 
         self.n_x = n_x = x.shape[0]
-        self.n_p = n_p = p_est.shape[0]
         self.n_u = n_u = u.shape[0]
-        self.n_y = n_y = y_meas.shape[0]
-
-        # time-varying parameter struct (parameters for optimization problem):
-        self.tvp = tvp = struct_symSX([
-            entry('dummy_1', shape=(1, 1)),
-            entry('dummy_2', shape=(2, 2))
-        ])
+        self.n_tvp = n_tvp = tvp.shape[0]
 
         # Fixed parameters:
-        self.p_set = p_set = struct_symSX([
-            entry('P_u', shape=(n_u, n_u)),      # MHE tuning matrix for input penalty
-            entry('P_y', shape=(n_y, n_y)),      # MHE tuning matrix for measurement penalty
-            entry('P_x', shape=(n_x, n_x)),      # MHE tuning matrix for arrival cost (states)
-            entry('P_p', shape=(n_p, n_p)),      # MHE tuning matrix for arrival cost (estimated parameters)
+        self.p_set = p_set = struct_symMX([
+            entry('dummy_1'),
         ])
 
         """
@@ -76,41 +99,42 @@ class go_mhe:
         model: define difference equations
         --------------------------------------------------------------------------
         """
-        self.x_next = x_next = struct_SX(x)
+        self.x_next = x_next = struct_MX(x)
 
-        LTI_system = sio.loadmat('../../data/LTI_sys_triple_mass_pendulum/LTI_sys_dc.mat')
-        A, B, C = (LTI_system[key] for key in ['A_dc', 'B_dc', 'C_dc'])
+        nn_in_sym = vertcat(x, u, tvp)
+        nn_in_sym_scaled = nn_in_sym/input_scaling.to_numpy()
 
-        x_next['LTI_x'] = A@x.cat+B@(u.cat-p_est.cat)
+        nn_out_sym_scaled = dense_nn(weights, config, nn_in_sym.T)
+        nn_out_sym = nn_out_sym_scaled.T*output_scaling.to_numpy()
 
-        # Calculated measurements from optimization variables (states):
-        self.y_calc = y_calc = struct_SX(y_meas)
+        dtank_press = nn_out_sym[:7]
+        pump_energy = nn_out_sym[7:12]
+        jun_cl_press_mean_norm = nn_out_sym[12:]  # Mean value of the normalized cluster pressures
+        jun_cl_press_min = nn_out_sym[12:]*jun_cl_press_fac_min.to_numpy().reshape(-1, 1)
 
-        y_calc['disc_angle'] = C@x.cat
+        x_next['tank_press'] = x.cat+dtank_press
 
         # Create casadi functions:
-        self.x_next_fun = Function('state_equation', [x, u, p_est, tvp, p_set], [x_next])
-        self.y_calc_fun = Function('meas_equation', [x, u, p_est, tvp, p_set], [y_calc])
+        self.x_next_fun = Function('state_equation', [x, u, tvp, p_set], [x_next])
 
         """
         --------------------------------------------------------------------------
         model: define constraints
         --------------------------------------------------------------------------
         """
-        self.nl_cons = []
-        self.nl_ub = np.array([0])
-        self.nl_lb = np.array([0])
+        self.nl_cons = [
+            vertcat(jun_cl_press_min-50,
+                    pump_energy
+                    )]
+        self.nl_ub = np.inf*np.ones((35, 1))
+        self.nl_lb = np.zeros((35, 1))
 
         assert type(self.nl_cons) == list, 'nl_cons must be a list. Can be left empty if not used.'
-        self.nl_cons_fun = Function('nl_cons', [x, u, p_est, tvp, p_set], self.nl_cons)
+        self.nl_cons_fun = Function('nl_cons', [x, u, tvp, p_set], self.nl_cons)
 
         self.model_vars = {
             'x_mhe': x,
             'u_mhe': u,
-            'u_meas': u,
-            'p_mhe': p_est,
-            'y_meas': y_meas,
-            'y_calc': y_calc,
             'tvp': tvp
         }
 
@@ -122,7 +146,7 @@ class go_mhe:
         """
 
         # Create struct for optimization variables:
-        self.obj_x = obj_x = struct_symSX([
+        self.obj_x = obj_x = struct_symMX([
             entry('x', repeat=self.n_horizon+1, struct=self.x),
             entry('u', repeat=self.n_horizon, struct=self.u),
             entry('p_est', struct=self.p_est)
@@ -132,7 +156,7 @@ class go_mhe:
         self.n_x_optim = self.obj_x.shape[0]
 
         # Create struct for optimization parameters:
-        self.obj_p = obj_p = struct_symSX([
+        self.obj_p = obj_p = struct_symMX([
             entry('x_0', struct=self.x),
             entry('p_0', struct=self.p_est),
             entry('u_meas', repeat=self.n_horizon, struct=self.u_meas),
@@ -414,3 +438,32 @@ class mhe_data:
 
         with open(save_name, 'wb') as f:
             pickle.dump(cas_res_num, f)
+
+
+def dense_nn(weights, config, nn_in):
+    """
+    Forward Propagation through a Neural Network with weights and config from keras (as imported with TF 2.0+)
+
+    weights and config are lists that can be retrieved from keras models with the get_weights, get_config method on layers
+    activation can be part of the dense layer or added as an extra layer.
+
+    p_dropout is the probability that weights will be set to zero. By defaul p_dropout is zero (scalar) and will not be executed.
+    If p_dropout is supplied it must have the same length as the amount of dropout layers in the ANN.
+    """
+    k = 0
+    for layer_i in config['layers']:
+        if 'Dense' in layer_i['class_name']:
+            nn_in = nn_in@weights[k] + weights[k+1].reshape(1, -1)
+            # Two weights for every dense layer
+            k += 2
+        if 'activation' in layer_i['config'].keys():
+            if 'linear' in layer_i['config']['activation']:
+                nn_in = nn_in
+            if 'tanh' in layer_i['config']['activation']:
+                nn_in = tanh(nn_in)
+            else:
+                print('Activation not currently supported.')
+    return nn_in
+
+
+gmpc = go_mhe(n_horizon=10)
