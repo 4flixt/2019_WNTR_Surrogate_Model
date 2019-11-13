@@ -840,15 +840,15 @@
 
 [STATUS]
 ;ID              	Status/Setting
- PU2             	Open	
- PU5             	Open
- PU6             	Open
- PU8             	Open
- PU10            	Open
- V2              	Active
- V1              	Active
- V45              	Active
- V47             	Active
+ PU2             	Closed	
+ PU5             	Closed
+ PU6             	Closed
+ PU8             	Closed
+ PU10            	Closed
+ V2              	Closed
+ V1              	Closed
+ V45              	Closed
+ V47             	Closed
 
 [PATTERNS]
 ;ID              	Multipliers
