@@ -12,13 +12,14 @@ sys.path.append('../')
 from testWN import testWN as twm
 
 
-def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_input=True, narx_output=False, return_lists=False):
+def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_input=True, narx_output=False, return_lists=False, inp_file=None):
     """
     --------------------------------------------------
     Get network informations
     --------------------------------------------------
     """
-    inp_file = '../Code/c-town_true_network_simplified_controls.inp'
+    if not inp_file:
+        inp_file = '../Code/c-town_true_network_simplified_controls.inp'
     ctown = twm(inp_file)
     nw_node_df = pd.DataFrame(ctown.wn.nodes.todict())
     nw_link_df = pd.DataFrame(ctown.wn.links.todict())
