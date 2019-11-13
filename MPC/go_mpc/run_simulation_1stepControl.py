@@ -16,10 +16,13 @@ import wntr
 import wntr.network.controls as controls
 import wntr.metrics.economic as economics
 
+from casadi import *
+
 import pickle
 import random
 import pdb
 
+from go_mpc import go_mpc
 
 # %% ::: Loading .inp file
 inp_file = '../../Code/c-town_true_network_simplified_controls.inp'
@@ -56,6 +59,10 @@ nn_model_path = './model/002_man_4x80/'
 cluster_labels = pd.read_json(nn_model_path+'cluster_labels_dt1h.json')
 pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h.json')
 
+# Create controller:
+n_horizon = 10
+gmpc = go_mpc(n_horizon)
+
 # %% ::: Simulation with updated controls at each time step
 for t in range(simTimeSteps):
 
@@ -75,23 +82,50 @@ for t in range(simTimeSteps):
         ctown.wn.options.time.duration = 0
         ctown.wn.options.time.duration = t*3600
 
+    """
+    ---------------------------------------------------
+    Forecasting water demand for the next k steps
+    ---------------------------------------------------
+    """
+    startT = t
+    addNoise = False
+    demand_pred = ctown.forecast_demand_gnoise(n_horizon, startT*ctown.wn.options.time.hydraulic_timestep, ctown.wn.options.time.hydraulic_timestep, addNoise)
+    # Cluster demand:
+    demand_pred_cl = demand_pred.groupby(cluster_labels.loc['pressure_cluster'], axis=1).sum()
+
+    """
+    ---------------------------------------------------
+    Get current state:
+    ---------------------------------------------------
+    """
+    if t == 0:
+        x0 = 10*np.ones((7, 1))
+    else:
+        None
+
+    """
+    ---------------------------------------------------
+    Setup (for current time) and Run controller
+    ---------------------------------------------------
+    """
+    pdb.set_trace()
+    # Setup controller for time t:
+    gmpc.obj_p_num['x_0'] = x0
+    gmpc.obj_p_num['tvp'] = vertsplit(demand_pred_cl.to_numpy())
+
+    gmpc.solve()
+
     # ::: Adding control for current step
     # ::::::::::::::::::::::::::::::::::::::
     control_vector = np.zeros(len(min_control))
     for el in range(len(control_vector)):
         control_vector[el] = random.uniform(min_control[el], max_control[el])  # TODO: modify. Now it is random
-    # ::::::::::::::::::::::::::::::::::::::
-    ctown.control_action(control_components, control_vector, t, ctown.wn.options.time.hydraulic_timestep)
 
-    # Forecasting water demand for the next k steps
-    k = 24  # Time horizon for water demand prediction
-    startT = t
-    addNoise = False
-    demand_pred = ctown.forecast_demand_gnoise(k, startT*ctown.wn.options.time.hydraulic_timestep, ctown.wn.options.time.hydraulic_timestep, addNoise)
-    demand_pred_cl = demand_pred.groupby(cluster_labels.loc['pressure_cluster'], axis=1).sum()
-    pdb.set_trace()
     # ::: Running the simulation
     start_time = time.time()
+
+    # ::::::::::::::::::::::::::::::::::::::
+    ctown.control_action(control_components, control_vector, t, ctown.wn.options.time.hydraulic_timestep)
 
     # ::: Run the simulation up to the current time step
     sim = wntr.sim.EpanetSimulator(ctown.wn)

@@ -12,7 +12,7 @@ import pandas as pd
 from tensorflow import keras
 
 
-class go_mhe:
+class go_mpc:
     def __init__(self, n_horizon, cas_verbose=True):
 
         self.n_horizon = n_horizon
@@ -104,7 +104,7 @@ class go_mhe:
         nn_in_sym = vertcat(x, u, tvp)
         nn_in_sym_scaled = nn_in_sym/input_scaling.to_numpy()
 
-        nn_out_sym_scaled = dense_nn(weights, config, nn_in_sym.T)
+        nn_out_sym_scaled = dense_nn(weights, config, nn_in_sym_scaled.T)
         nn_out_sym = nn_out_sym_scaled.T*output_scaling.to_numpy()
 
         dtank_press = nn_out_sym[:7]
@@ -134,7 +134,7 @@ class go_mhe:
         self.u_ub = u(1)
         self.u_ub['head_pump'] = 2
         self.u_ub['PRValve'] = 600
-        self.u_ub['TCValve'] = 80
+        self.u_ub['TCValve'] = 70
 
         # Further (non-linear) constraints:
         self.nl_cons = struct_MX([
@@ -156,7 +156,7 @@ class go_mhe:
         """
         lterm = sum1(pump_energy)
         mterm = 0
-        rterm = 0
+        rterm = sum1(1/self.u_ub.cat*self.u.cat**2)
 
         self.lterm_fun = Function('lterm', [x, u, tvp, p_set], [lterm])
         self.mterm_fun = Function('mterm_fun', [x], [mterm])
@@ -265,8 +265,6 @@ class go_mhe:
         self.obj_x_num = self.obj_x(0)
         self.obj_p_num = self.obj_p(0)
 
-        pdb.set_trace()
-
     def solve(self):
         """
         Solves the optimization problem for the given intial condition and parameter set.
@@ -282,7 +280,7 @@ class go_mhe:
         self.solver_stats = self.S.stats()
 
 
-class simulator(go_mhe):
+class simulator(go_mpc):
     def __init__(self, n_horizon):
 
         self.mhe_counter = 0     # must start at zero.
@@ -292,9 +290,9 @@ class simulator(go_mhe):
         simulator: Create Optimizer
         --------------------------------------------------------------------------
         """
-        # go_mhe creates the model and optimizer object and initilizes
+        # go_mpc creates the model and optimizer object and initilizes
         # the casadi structures that hold the optimal solution.
-        go_mhe.__init__(self, n_horizon)
+        go_mpc.__init__(self, n_horizon)
 
         """
         --------------------------------------------------------------------------
@@ -482,6 +480,3 @@ def dense_nn(weights, config, nn_in):
             else:
                 print('Activation not currently supported.')
     return nn_in
-
-
-gmpc = go_mhe(n_horizon=10)
