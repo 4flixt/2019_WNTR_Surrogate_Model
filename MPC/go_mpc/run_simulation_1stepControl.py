@@ -55,7 +55,7 @@ min_control = np.array([0., 0., 0., 0., 0., 0., 0., 0., 0.])  # Lower bondary fo
 max_control = np.array([2., 2., 2., 2., 2., 600.0, 600.0, 600.0, 70.])  # Upper bondary for controls
 
 # Load clustering information:
-nn_model_path = './model/002_man_4x80/'
+nn_model_path = './model/004_man_6x40_both_datasets/'
 cluster_labels = pd.read_json(nn_model_path+'cluster_labels_dt1h.json')
 pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h.json')
 
@@ -99,27 +99,22 @@ for t in range(simTimeSteps):
     ---------------------------------------------------
     """
     if t == 0:
-        x0 = 10*np.ones((7, 1))
+        x0 = np.array([3, 3, 2.5, 5.2, 1, 0.5, 2.5])
     else:
-        None
+        x0 = results.tankLevels.iloc[t-1].to_numpy()
+        print(results.tankLevels.iloc[t-1])
 
     """
     ---------------------------------------------------
     Setup (for current time) and Run controller
     ---------------------------------------------------
     """
-    pdb.set_trace()
     # Setup controller for time t:
     gmpc.obj_p_num['x_0'] = x0
     gmpc.obj_p_num['tvp'] = vertsplit(demand_pred_cl.to_numpy())
 
     gmpc.solve()
-
-    # ::: Adding control for current step
-    # ::::::::::::::::::::::::::::::::::::::
-    control_vector = np.zeros(len(min_control))
-    for el in range(len(control_vector)):
-        control_vector[el] = random.uniform(min_control[el], max_control[el])  # TODO: modify. Now it is random
+    control_vector = gmpc.obj_x_num['u', 0].full().flatten()
 
     # ::: Running the simulation
     start_time = time.time()

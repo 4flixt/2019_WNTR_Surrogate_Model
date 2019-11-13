@@ -26,8 +26,8 @@ class go_mpc:
         template_model: Load the neural network system model
         --------------------------------------------------------------------------
         """
-        nn_model_path = './model/002_man_4x80/'
-        nn_model_name = '002_man_4x80.h5'
+        nn_model_path = './model/004_man_6x40_both_datasets/'
+        nn_model_name = '004_man_6x40_both_datasets.h5'
 
         keras_model = keras.models.load_model(nn_model_path+nn_model_name)
         print('----------------------------------------------------')
@@ -37,7 +37,7 @@ class go_mpc:
         weights = keras_model.get_weights()
         config = keras_model.get_config()
 
-        with open(nn_model_path+'train_data_param_unfiltered.pkl', 'rb') as f:
+        with open(nn_model_path+'004_man_6x40_both_datasets_train_data_param.pkl', 'rb') as f:
             train_data_param = pickle.load(f)
 
         print('----------------------------------------------------')
@@ -143,9 +143,10 @@ class go_mpc:
         ])
 
         self.nl_ub = self.nl_cons(np.inf)
-        self.nl_lb = self.nl_cons(0)
+        self.nl_lb = self.nl_cons(-np.inf)
 
-        self.nl_lb['jun_cl_press_min'] = 50
+        #self.nl_lb['jun_cl_press_min'] = 50
+        #self.nl_lb['pump_energy'] = 0
 
         self.nl_cons_fun = Function('nl_cons', [x, u, tvp, p_set], [self.nl_cons])
 
@@ -154,9 +155,10 @@ class go_mpc:
         model: define cost function
         --------------------------------------------------------------------------
         """
-        lterm = sum1(pump_energy)
+        lterm = sum1(x.cat-5)**2
+        #lterm = sum1(pump_energy)
         mterm = 0
-        rterm = sum1(1/self.u_ub.cat*self.u.cat**2)
+        rterm = 1*sum1(1/self.u_ub.cat*self.u.cat**2)
 
         self.lterm_fun = Function('lterm', [x, u, tvp, p_set], [lterm])
         self.mterm_fun = Function('mterm_fun', [x], [mterm])
@@ -191,6 +193,10 @@ class go_mpc:
             entry('p_set', struct=self.p_set)
         ])
 
+        self.mpc_obj_aux = struct_MX(struct_symMX([
+            entry('nl_cons', repeat=self.n_horizon, struct=self.nl_cons)
+        ]))
+
         self.lb_obj_x = obj_x(-np.inf)
         self.ub_obj_x = obj_x(np.inf)
 
@@ -217,9 +223,11 @@ class go_mpc:
             cons_lb.append(np.zeros((self.x.shape[0], 1)))
             cons_ub.append(np.zeros((self.x.shape[0], 1)))
 
-            cons.append(self.nl_cons_fun(obj_x['x', k], obj_x['u', k], obj_p['tvp', k], obj_p['p_set']))
+            nl_cons_k = self.nl_cons_fun(obj_x['x', k], obj_x['u', k], obj_p['tvp', k], obj_p['p_set'])
+            cons.append(nl_cons_k)
             cons_lb.append(self.nl_lb)
             cons_ub.append(self.nl_ub)
+            self.mpc_obj_aux['nl_cons', k] = nl_cons_k
 
             obj += self.lterm_fun(obj_x['x', k], obj_x['u', k], obj_p['tvp', k], obj_p['p_set'])
             obj += self.rterm_fun(obj_x['u', k])
@@ -248,7 +256,7 @@ class go_mpc:
         optim_opts["expand"] = False
         optim_opts["ipopt.linear_solver"] = 'ma27'
         # NOTE: this could be passed as parameters of the optimizer class
-        optim_opts["ipopt.max_iter"] = 1000
+        optim_opts["ipopt.max_iter"] = 150
         optim_opts["ipopt.ma27_la_init_factor"] = 50.0
         optim_opts["ipopt.ma27_liw_init_factor"] = 50.0
         optim_opts["ipopt.ma27_meminc_factor"] = 10.0
@@ -261,9 +269,13 @@ class go_mpc:
         # Create casadi optimization object:
         nlp = {'x': vertcat(obj_x), 'f': obj, 'g': cons, 'p': vertcat(obj_p)}
         self.S = nlpsol('S', 'ipopt', nlp, optim_opts)
+
+        self.aux_fun = Function('aux_fun', [self.obj_x, self.obj_p], [self.mpc_obj_aux])
+
         # Create copies of these structures with numerical values (all zero):
         self.obj_x_num = self.obj_x(0)
         self.obj_p_num = self.obj_p(0)
+        self.obj_aux_num = self.mpc_obj_aux(0)
 
     def solve(self):
         """
@@ -278,6 +290,10 @@ class go_mpc:
         # Values of lagrange multipliers:
         self.lam_g_num = r['lam_g']
         self.solver_stats = self.S.stats()
+
+        self.obj_aux_num = self.mpc_obj_aux(self.aux_fun(self.obj_x_num, self.obj_p_num))
+
+        pdb.set_trace()
 
 
 class simulator(go_mpc):
