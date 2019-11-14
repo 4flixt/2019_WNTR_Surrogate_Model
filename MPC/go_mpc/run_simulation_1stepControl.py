@@ -29,6 +29,8 @@ from go_mpc import go_mpc
 # %% ::: Loading .inp file
 inp_file = '../../Code/c-town_true_network_simplified_controls.inp'
 ctown = twm(inp_file)
+nw_node_df = pd.DataFrame(ctown.wn.nodes.todict())
+nw_link_df = pd.DataFrame(ctown.wn.links.todict())
 
 # %% ::: Setting up time and options for simulation
 nDaysSim = 30
@@ -72,21 +74,27 @@ def plot_pred(gmpc, results, time_arr):
     # pdb.set_trace()
     plt.close('all')
     fig, ax = plt.subplots(3, 1)
+    t_start = np.maximum(0, time_arr[0]-20*3600)
+    t_end = time_arr[-1]
+
     results.tankLevels.plot(ax=ax[0], legend=False)
     x = horzcat(*gmpc.obj_x_num['x']).T.full()
-    u_pump = horzcat(*gmpc.obj_x_num['u']).T.full()[:, :5]
-    p_min = horzcat(*gmpc.obj_aux_num['nl_cons', :, 'jun_cl_press_min']).T.full()
     ax[0].set_prop_cycle(None)
     ax[0].plot(time_arr.reshape(-1, 1), x, '--')
-    ax[0].set_xlim(0, time_arr[-1])
+    ax[0].set_xlim(t_start, t_end)
 
-    #results.tankLevels.plot(ax=ax[1], legend=False)
+    u_pump = horzcat(*gmpc.obj_x_num['u']).T.full()[:, :5]
+    head_pump_speed = results.link['setting'][nw_link_df.keys()[nw_link_df.loc['link_type'] == 'Pump']]
+    #head_pump_status = results.link['status'][nw_link_df.keys()[nw_link_df.loc['link_type'] == 'Pump']]
     ax[1].plot(time_arr[:-1], u_pump, '--')
+    head_pump_speed.plot(ax=ax[1], legend=False)
+    ax[0].set_xlim(t_start, t_end)
 
+    p_min = horzcat(*gmpc.obj_aux_num['nl_cons', :, 'jun_cl_press_min']).T.full()
     results.press_cl_min.plot(legend=False, ax=ax[2])
     ax[2].set_prop_cycle(None)
     ax[2].plot(time_arr[:-1], p_min, '--')
-    ax[2].set_xlim(0, time_arr[-1])
+    ax[2].set_xlim(t_start, t_end)
     plt.show()
 
 
@@ -161,13 +169,13 @@ for t in range(simTimeSteps):
     gmpc.solve()
     control_vector = gmpc.obj_x_num['u', 0].full().flatten()
 
-    if t >= 1:
-        if t >= 2:
-            p.terminate()
-        p = Process(target=plot_pred, args=(gmpc, results, time_arr))
-        p.start()
+    # if t >= 1:
+    #     if t >= 2:
+    #         p.terminate()
+    #     p = Process(target=plot_pred, args=(gmpc, results, time_arr))
+    #     p.start()
 
-        # ::: Running the simulation
+    # ::: Running the simulation
     start_time = time.time()
 
     # ::::::::::::::::::::::::::::::::::::::
@@ -181,10 +189,11 @@ for t in range(simTimeSteps):
     results.press_cl_min = results.node['pressure'][nodeNames[2]].groupby(cluster_labels.loc['pressure_cluster'], axis=1).min()
 
     # ::: Saving simulation output
-    tempInpFile = "tempResults/tempInpFile_time%s.inp" % t
-    ctown.wn.write_inpfile(tempInpFile)
     with open("tempResults/results_sim_time%s.pkl" % t, "wb") as f:
         pickle.dump(results, f)
         f.close()
 
+    print('-----------------------------------------------------------')
+    print('Step {} of {}'.format(t, simTimeSteps))
     print('Total simulation time: %.3f s' % (time.time()-start_time))
+    print('-----------------------------------------------------------')
