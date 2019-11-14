@@ -5,6 +5,8 @@ import os
 import pandas as pd
 #import sklearn
 import numpy as np
+import matplotlib.pyplot as plt
+from multiprocessing import Process
 
 import time
 
@@ -63,6 +65,43 @@ pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h.json')
 n_horizon = 10
 gmpc = go_mpc(n_horizon)
 
+# Plotting function:
+
+
+def plot_pred(gmpc, results, time_arr):
+    # pdb.set_trace()
+    plt.close('all')
+    fig, ax = plt.subplots(3, 1)
+    results.tankLevels.plot(ax=ax[0], legend=False)
+    x = horzcat(*gmpc.obj_x_num['x']).T.full()
+    u_pump = horzcat(*gmpc.obj_x_num['u']).T.full()[:, :5]
+    p_min = horzcat(*gmpc.obj_aux_num['nl_cons', :, 'jun_cl_press_min']).T.full()
+    ax[0].set_prop_cycle(None)
+    ax[0].plot(time_arr.reshape(-1, 1), x, '--')
+    ax[0].set_xlim(0, time_arr[-1])
+
+    #results.tankLevels.plot(ax=ax[1], legend=False)
+    ax[1].plot(time_arr[:-1], u_pump, '--')
+
+    ax[2].plot(time_arr[:-1], p_min, '--')
+    plt.show()
+
+
+"""
+---------------------------------------------------
+Initialize simlation:
+---------------------------------------------------
+"""
+# control_vector = np.zeros(9)
+# # ::::::::::::::::::::::::::::::::::::::
+# ctown.control_action(control_components, control_vector, 0, ctown.wn.options.time.hydraulic_timestep)
+#
+# # ::: Run the simulation up to the current time step
+# sim = wntr.sim.EpanetSimulator(ctown.wn)
+# results = sim.run_sim()
+# results.tankLevels = results.node['head'][nodeNames[0]]-tankEl
+# results.energy = economics.pump_energy(results.link['flowrate'], results.node['head'], ctown.wn)
+
 # %% ::: Simulation with updated controls at each time step
 for t in range(simTimeSteps):
 
@@ -88,8 +127,11 @@ for t in range(simTimeSteps):
     ---------------------------------------------------
     """
     startT = t
+    dt_hyd = ctown.wn.options.time.hydraulic_timestep
     addNoise = False
-    demand_pred = ctown.forecast_demand_gnoise(n_horizon, startT*ctown.wn.options.time.hydraulic_timestep, ctown.wn.options.time.hydraulic_timestep, addNoise)
+    demand_pred = ctown.forecast_demand_gnoise(n_horizon, startT*dt_hyd, dt_hyd, addNoise)
+
+    time_arr = np.arange(dt_hyd*t, dt_hyd*(t+n_horizon+1), dt_hyd)-dt_hyd
     # Cluster demand:
     demand_pred_cl = demand_pred.groupby(cluster_labels.loc['pressure_cluster'], axis=1).sum()
 
@@ -116,7 +158,13 @@ for t in range(simTimeSteps):
     gmpc.solve()
     control_vector = gmpc.obj_x_num['u', 0].full().flatten()
 
-    # ::: Running the simulation
+    if t >= 1:
+        if t >= 2:
+            p.terminate()
+        p = Process(target=plot_pred, args=(gmpc, results, time_arr))
+        p.start()
+
+        # ::: Running the simulation
     start_time = time.time()
 
     # ::::::::::::::::::::::::::::::::::::::

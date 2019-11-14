@@ -155,10 +155,10 @@ class go_mpc:
         model: define cost function
         --------------------------------------------------------------------------
         """
-        lterm = sum1(x.cat-5)**2
+        lterm = sum1(x.cat-5)**2  # +sum1((jun_cl_press_min-50)**2)
         #lterm = sum1(pump_energy)
         mterm = 0
-        rterm = 1*sum1(1/self.u_ub.cat*self.u.cat**2)
+        rterm = 0  # 1*sum1(1/self.u_ub.cat*self.u.cat**2)
 
         self.lterm_fun = Function('lterm', [x, u, tvp, p_set], [lterm])
         self.mterm_fun = Function('mterm_fun', [x], [mterm])
@@ -293,8 +293,6 @@ class go_mpc:
 
         self.obj_aux_num = self.mpc_obj_aux(self.aux_fun(self.obj_x_num, self.obj_p_num))
 
-        pdb.set_trace()
-
 
 class simulator(go_mpc):
     def __init__(self, n_horizon):
@@ -389,23 +387,6 @@ class simulator(go_mpc):
         y_real += self.y_noise_mag*np.random.randn(*y_real.shape)
 
         return y_real.reshape(self.n_y, 1)
-
-    def y_calc_now(self, mhe_counter):
-        """
-        Returns the calculated value of y at each mhe step. This is useful for debugging.
-        Uses the casadi function defined in "model"
-        """
-        if mhe_counter < self.n_horizon-1:
-            y_calc_now = np.zeros(self.n_y)
-        else:
-            x = self.mhe_data.x_mhe[mhe_counter]
-            u = self.mhe_data.u_mhe[mhe_counter]
-            p_est = self.mhe_data.p_mhe[mhe_counter]
-            tvp = self.mhe_data.tvp[mhe_counter]
-            p_set = self.obj_p_num['p_set'].full()
-            y_calc_now = self.y_calc_fun(x, u, p_est, tvp, p_set).full()
-
-        return y_calc_now
 
     def tvp_real_now(self, time_step):
         """
