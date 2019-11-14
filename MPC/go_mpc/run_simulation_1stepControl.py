@@ -83,7 +83,10 @@ def plot_pred(gmpc, results, time_arr):
     #results.tankLevels.plot(ax=ax[1], legend=False)
     ax[1].plot(time_arr[:-1], u_pump, '--')
 
+    results.press_cl_min.plot(legend=False, ax=ax[2])
+    ax[2].set_prop_cycle(None)
     ax[2].plot(time_arr[:-1], p_min, '--')
+    ax[2].set_xlim(0, time_arr[-1])
     plt.show()
 
 
@@ -175,6 +178,7 @@ for t in range(simTimeSteps):
     results = sim.run_sim()
     results.tankLevels = results.node['head'][nodeNames[0]]-tankEl
     results.energy = economics.pump_energy(results.link['flowrate'], results.node['head'], ctown.wn)
+    results.press_cl_min = results.node['pressure'][nodeNames[2]].groupby(cluster_labels.loc['pressure_cluster'], axis=1).min()
 
     # ::: Saving simulation output
     tempInpFile = "tempResults/tempInpFile_time%s.inp" % t
