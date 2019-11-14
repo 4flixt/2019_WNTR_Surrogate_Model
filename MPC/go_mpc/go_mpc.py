@@ -26,8 +26,8 @@ class go_mpc:
         template_model: Load the neural network system model
         --------------------------------------------------------------------------
         """
-        nn_model_path = './model/004_man_6x40_both_datasets/'
-        nn_model_name = '004_man_6x40_both_datasets.h5'
+        nn_model_path = './model/005_man_5x50_both_datasets_filtered/'
+        nn_model_name = '005_man_5x50_both_datasets_filtered.h5'
 
         keras_model = keras.models.load_model(nn_model_path+nn_model_name)
         print('----------------------------------------------------')
@@ -37,7 +37,7 @@ class go_mpc:
         weights = keras_model.get_weights()
         config = keras_model.get_config()
 
-        with open(nn_model_path+'004_man_6x40_both_datasets_train_data_param.pkl', 'rb') as f:
+        with open(nn_model_path+'005_man_5x50_both_datasets_filtered_train_data_param.pkl', 'rb') as f:
             train_data_param = pickle.load(f)
 
         print('----------------------------------------------------')
@@ -58,8 +58,8 @@ class go_mpc:
 
         # Load the cluster labels and the pressure factors and determine the smallest factor for each cluster.
         # For a given mean value of the normalized cluster pressure, this will determine the smallest physical pressure in the cluster
-        cluster_labels = pd.read_json(nn_model_path+'cluster_labels_dt1h.json')
-        pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h.json')
+        cluster_labels = pd.read_json(nn_model_path+'cluster_labels_dt1h_both_datasets.json')
+        pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h_both_datasets.json')
 
         jun_cl_press_fac_min = pressure_factor.groupby(cluster_labels.loc['pressure_cluster'], axis=1).min()
 
@@ -122,12 +122,22 @@ class go_mpc:
         model: define constraints
         --------------------------------------------------------------------------
         """
+        # Softconstraint slack variables:
+        self.eps = eps = struct_symMX([
+            entry('tank_press', shape=(7, 1))
+        ])
+
         # For states
         self.x_lb = x(0)
         self.x_ub = x(15)
+
+        # Do not change bounds for soft constraint slack variables
+        self.eps_lb = eps(0)
+        self.eps_ub = eps(np.inf)
+
         # Terminal constraints
-        self.x_terminal_lb = x(0)
-        self.x_terminal_ub = x(15)
+        self.x_terminal_lb = self.x_lb
+        self.x_terminal_ub = self.x_ub
 
         # Inputs
         self.u_lb = u(0)
@@ -138,6 +148,7 @@ class go_mpc:
 
         # Further (non-linear) constraints:
         self.nl_cons = struct_MX([
+            entry('tank_press', expr=self.x['tank_press']+self.eps['tank_press']),
             entry('jun_cl_press_min', expr=jun_cl_press_min),
             entry('pump_energy', expr=pump_energy)
         ])
@@ -147,20 +158,21 @@ class go_mpc:
 
         self.nl_lb['jun_cl_press_min'] = 0
         #self.nl_lb['pump_energy'] = 0
+        self.nl_lb['tank_press'] = 1
 
-        self.nl_cons_fun = Function('nl_cons', [x, u, tvp, p_set], [self.nl_cons])
+        self.nl_cons_fun = Function('nl_cons', [x, u, tvp, p_set, eps], [self.nl_cons])
 
         """
         --------------------------------------------------------------------------
         model: define cost function
         --------------------------------------------------------------------------
         """
-        lterm = sum1(x.cat-5)**2  # +sum1((jun_cl_press_min-50)**2)
-        #lterm = sum1(pump_energy)
+        # lterm = sum1(x.cat-5)**2  # +sum1((jun_cl_press_min-50)**2)
+        lterm = sum1(pump_energy)/100 + 100*sum1(eps.cat**2)
         mterm = 0
         rterm = 0  # 1*sum1(1/self.u_ub.cat*self.u.cat**2)
 
-        self.lterm_fun = Function('lterm', [x, u, tvp, p_set], [lterm])
+        self.lterm_fun = Function('lterm', [x, u, tvp, p_set, eps], [lterm])
         self.mterm_fun = Function('mterm_fun', [x], [mterm])
         self.rterm_fun = Function('rterm_fun', [u], [rterm])
 
@@ -181,6 +193,7 @@ class go_mpc:
         self.obj_x = obj_x = struct_symMX([
             entry('x', repeat=self.n_horizon+1, struct=self.x),
             entry('u', repeat=self.n_horizon, struct=self.u),
+            entry('eps', repeat=self.n_horizon, struct=self.eps)
         ])
 
         # Number of optimization variables:
@@ -223,13 +236,13 @@ class go_mpc:
             cons_lb.append(np.zeros((self.x.shape[0], 1)))
             cons_ub.append(np.zeros((self.x.shape[0], 1)))
 
-            nl_cons_k = self.nl_cons_fun(obj_x['x', k], obj_x['u', k], obj_p['tvp', k], obj_p['p_set'])
+            nl_cons_k = self.nl_cons_fun(obj_x['x', k], obj_x['u', k], obj_p['tvp', k], obj_p['p_set'], obj_x['eps', k])
             cons.append(nl_cons_k)
             cons_lb.append(self.nl_lb)
             cons_ub.append(self.nl_ub)
             self.mpc_obj_aux['nl_cons', k] = nl_cons_k
 
-            obj += self.lterm_fun(obj_x['x', k], obj_x['u', k], obj_p['tvp', k], obj_p['p_set'])
+            obj += self.lterm_fun(obj_x['x', k], obj_x['u', k], obj_p['tvp', k], obj_p['p_set'], obj_x['eps', k])
             obj += self.rterm_fun(obj_x['u', k])
 
             self.lb_obj_x['x', k] = self.x_lb
@@ -237,6 +250,9 @@ class go_mpc:
 
             self.lb_obj_x['u', k] = self.u_lb
             self.ub_obj_x['u', k] = self.u_ub
+
+            self.lb_obj_x['eps', k] = self.eps_lb
+            self.ub_obj_x['eps', k] = self.eps_ub
 
         obj += self.mterm_fun(obj_x['x', k+1])
 

@@ -57,9 +57,9 @@ min_control = np.array([0., 0., 0., 0., 0., 0., 0., 0., 0.])  # Lower bondary fo
 max_control = np.array([2., 2., 2., 2., 2., 600.0, 600.0, 600.0, 70.])  # Upper bondary for controls
 
 # Load clustering information:
-nn_model_path = './model/004_man_6x40_both_datasets/'
-cluster_labels = pd.read_json(nn_model_path+'cluster_labels_dt1h.json')
-pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h.json')
+nn_model_path = './model/005_man_5x50_both_datasets_filtered/'
+cluster_labels = pd.read_json(nn_model_path+'cluster_labels_dt1h_both_datasets.json')
+pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h_both_datasets.json')
 
 # Create controller:
 n_horizon = 10
