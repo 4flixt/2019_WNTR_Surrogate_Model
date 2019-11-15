@@ -169,13 +169,12 @@ class go_mpc:
         --------------------------------------------------------------------------
         """
         # lterm = sum1(x.cat-5)**2  # +sum1((jun_cl_press_min-50)**2)
-        lterm = sum1(pump_energy)/100 + 100*sum1(eps.cat**2)
+        lterm = sum1(pump_energy)/100 + 1e3*sum1(eps.cat**2)
         mterm = 0
-        rterm_factor = 10*sum1(((u.cat-tvp['u_prev'])/self.u_ub)**2)
+        self.rterm_factor = 1e-7
 
         self.lterm_fun = Function('lterm', [x, u, tvp, p_set, eps], [lterm])
         self.mterm_fun = Function('mterm_fun', [x], [mterm])
-        self.rterm_fun = Function('rterm_fun', [u, tvp], [rterm])
 
         self.model_vars = {
             'x_mhe': x,
@@ -245,7 +244,11 @@ class go_mpc:
 
             obj += self.lterm_fun(obj_x['x', k], obj_x['u', k], obj_p['tvp', k], obj_p['p_set'], obj_x['eps', k])
 
-            obj += self.rterm_fun(obj_x['u', k], obj_p['tvp', k])
+            # U regularization:
+            if k == 0:
+                obj += self.rterm_factor*sum1(((obj_x['u', k]-obj_p['tvp', k+1, 'u_prev'])**2)/self.u_ub)
+            else:
+                obj += self.rterm_factor*sum1(((obj_x['u', k]-obj_x['u', k-1])**2)/self.u_ub)
 
             self.lb_obj_x['x', k] = self.x_lb
             self.ub_obj_x['x', k] = self.x_ub
@@ -274,7 +277,7 @@ class go_mpc:
         optim_opts["expand"] = False
         optim_opts["ipopt.linear_solver"] = 'ma27'
         # NOTE: this could be passed as parameters of the optimizer class
-        optim_opts["ipopt.max_iter"] = 150
+        optim_opts["ipopt.max_iter"] = 200
         optim_opts["ipopt.ma27_la_init_factor"] = 50.0
         optim_opts["ipopt.ma27_liw_init_factor"] = 50.0
         optim_opts["ipopt.ma27_meminc_factor"] = 10.0

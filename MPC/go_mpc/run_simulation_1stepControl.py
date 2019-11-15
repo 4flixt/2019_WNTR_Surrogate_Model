@@ -3,7 +3,7 @@
 
 import os
 import pandas as pd
-#import sklearn
+# import sklearn
 import numpy as np
 import matplotlib.pyplot as plt
 from multiprocessing import Process
@@ -59,7 +59,7 @@ min_control = np.array([0., 0., 0., 0., 0., 0., 0., 0., 0.])  # Lower bondary fo
 max_control = np.array([2., 2., 2., 2., 2., 600.0, 600.0, 600.0, 70.])  # Upper bondary for controls
 
 # Load clustering information:
-nn_model_path = './model/005_man_5x50_both_datasets_filtered/'
+nn_model_path = './model/006_man_5x50_both_datasets_filtered_mpc01/'
 cluster_labels = pd.read_json(nn_model_path+'cluster_labels_dt1h_both_datasets.json')
 pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h_both_datasets.json')
 
@@ -85,8 +85,9 @@ def plot_pred(gmpc, results, time_arr):
 
     u_pump = horzcat(*gmpc.obj_x_num['u']).T.full()[:, :5]
     head_pump_speed = results.link['setting'][nw_link_df.keys()[nw_link_df.loc['link_type'] == 'Pump']]
-    #head_pump_status = results.link['status'][nw_link_df.keys()[nw_link_df.loc['link_type'] == 'Pump']]
-    ax[1].plot(time_arr[:-1], u_pump, '--')
+    # head_pump_status = results.link['status'][nw_link_df.keys()[nw_link_df.loc['link_type'] == 'Pump']]
+    ax[1].step(time_arr[:-1], u_pump, '--')
+    ax[1].set_prop_cycle(None)
     head_pump_speed.plot(ax=ax[1], legend=False)
     ax[0].set_xlim(t_start, t_end)
 
@@ -164,16 +165,18 @@ for t in range(simTimeSteps):
     """
     # Setup controller for time t:
     gmpc.obj_p_num['x_0'] = x0
-    gmpc.obj_p_num['tvp'] = vertsplit(demand_pred_cl.to_numpy())
+    gmpc.obj_p_num['tvp', :, 'jun_cl_demand_sum'] = vertsplit(demand_pred_cl.to_numpy())
+    gmpc.obj_p_num['tvp', :, 'u_prev'] = gmpc.obj_x_num['u']
 
     gmpc.solve()
     control_vector = gmpc.obj_x_num['u', 0].full().flatten()
 
-    # if t >= 1:
-    #     if t >= 2:
-    #         p.terminate()
-    #     p = Process(target=plot_pred, args=(gmpc, results, time_arr))
-    #     p.start()
+    if False:
+        if t >= 1:
+            if t >= 2:
+                p.terminate()
+            p = Process(target=plot_pred, args=(gmpc, results, time_arr))
+            p.start()
 
     # ::: Running the simulation
     start_time = time.time()
@@ -189,10 +192,11 @@ for t in range(simTimeSteps):
     results.press_cl_min = results.node['pressure'][nodeNames[2]].groupby(cluster_labels.loc['pressure_cluster'], axis=1).min()
 
     # ::: Saving simulation output
-    with open("tempResults/results_sim_time%s.pkl" % t, "wb") as f:
+    with open("tempResults/02_results_sim_time.pkl", "wb") as f:
         pickle.dump(results, f)
         f.close()
-
+    tempInpFile = "tempResults/tempInpFile_time%s.inp" % t
+    ctown.wn.write_inpfile(tempInpFile)
     print('-----------------------------------------------------------')
     print('Step {} of {}'.format(t, simTimeSteps))
     print('Total simulation time: %.3f s' % (time.time()-start_time))
