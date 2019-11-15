@@ -26,8 +26,8 @@ class go_mpc:
         template_model: Load the neural network system model
         --------------------------------------------------------------------------
         """
-        nn_model_path = './model/005_man_5x50_both_datasets_filtered/'
-        nn_model_name = '005_man_5x50_both_datasets_filtered.h5'
+        nn_model_path = './model/006_man_5x50_both_datasets_filtered_mpc01/'
+        nn_model_name = '006_man_5x50_both_datasets_filtered_mpc01.h5'
 
         keras_model = keras.models.load_model(nn_model_path+nn_model_name)
         print('----------------------------------------------------')
@@ -37,7 +37,7 @@ class go_mpc:
         weights = keras_model.get_weights()
         config = keras_model.get_config()
 
-        with open(nn_model_path+'005_man_5x50_both_datasets_filtered_train_data_param.pkl', 'rb') as f:
+        with open(nn_model_path+'006_man_5x50_both_datasets_filtered_mpc01_train_data_param.pkl', 'rb') as f:
             train_data_param = pickle.load(f)
 
         print('----------------------------------------------------')
@@ -83,6 +83,7 @@ class go_mpc:
         # time-varying parameter struct (parameters for optimization problem):
         self.tvp = tvp = struct_symMX([
             entry('jun_cl_demand_sum', shape=(30, 1)),
+            entry('u_prev', struct=u),
         ])
 
         self.n_x = n_x = x.shape[0]
@@ -101,7 +102,7 @@ class go_mpc:
         """
         self.x_next = x_next = struct_MX(x)
 
-        nn_in_sym = vertcat(x, u, tvp)
+        nn_in_sym = vertcat(x, u, tvp['jun_cl_demand_sum'])
         nn_in_sym_scaled = nn_in_sym/input_scaling.to_numpy()
 
         nn_out_sym_scaled = dense_nn(weights, config, nn_in_sym_scaled.T)
@@ -170,11 +171,11 @@ class go_mpc:
         # lterm = sum1(x.cat-5)**2  # +sum1((jun_cl_press_min-50)**2)
         lterm = sum1(pump_energy)/100 + 100*sum1(eps.cat**2)
         mterm = 0
-        rterm = 0  # 1*sum1(1/self.u_ub.cat*self.u.cat**2)
+        rterm_factor = 10*sum1(((u.cat-tvp['u_prev'])/self.u_ub)**2)
 
         self.lterm_fun = Function('lterm', [x, u, tvp, p_set, eps], [lterm])
         self.mterm_fun = Function('mterm_fun', [x], [mterm])
-        self.rterm_fun = Function('rterm_fun', [u], [rterm])
+        self.rterm_fun = Function('rterm_fun', [u, tvp], [rterm])
 
         self.model_vars = {
             'x_mhe': x,
@@ -243,7 +244,8 @@ class go_mpc:
             self.mpc_obj_aux['nl_cons', k] = nl_cons_k
 
             obj += self.lterm_fun(obj_x['x', k], obj_x['u', k], obj_p['tvp', k], obj_p['p_set'], obj_x['eps', k])
-            obj += self.rterm_fun(obj_x['u', k])
+
+            obj += self.rterm_fun(obj_x['u', k], obj_p['tvp', k])
 
             self.lb_obj_x['x', k] = self.x_lb
             self.ub_obj_x['x', k] = self.x_ub
