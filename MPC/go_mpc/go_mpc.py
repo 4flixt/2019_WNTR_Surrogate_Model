@@ -26,8 +26,8 @@ class go_mpc:
         template_model: Load the neural network system model
         --------------------------------------------------------------------------
         """
-        nn_model_path = './model/006_man_5x50_both_datasets_filtered_mpc01/'
-        nn_model_name = '006_man_5x50_both_datasets_filtered_mpc01.h5'
+        nn_model_path = './model/007_man_5x50_both_datasets_filtered_mpc02/'
+        nn_model_name = '007_man_5x50_both_datasets_filtered_mpc02.h5'
 
         keras_model = keras.models.load_model(nn_model_path+nn_model_name)
         print('----------------------------------------------------')
@@ -37,7 +37,7 @@ class go_mpc:
         weights = keras_model.get_weights()
         config = keras_model.get_config()
 
-        with open(nn_model_path+'006_man_5x50_both_datasets_filtered_mpc01_train_data_param.pkl', 'rb') as f:
+        with open(nn_model_path+'007_man_5x50_both_datasets_filtered_mpc02_train_data_param.pkl', 'rb') as f:
             train_data_param = pickle.load(f)
 
         print('----------------------------------------------------')
@@ -125,12 +125,14 @@ class go_mpc:
         """
         # Softconstraint slack variables:
         self.eps = eps = struct_symMX([
-            entry('tank_press', shape=(7, 1))
+            entry('tank_press_lb', shape=(7, 1)),
         ])
 
         # For states
         self.x_lb = x(0)
-        self.x_ub = x(15)
+        # From INP file:
+        max_tank_level = np.array([6.75, 6.5, 5, 5.5, 4.5, 5.9, 4.7])+1e-3
+        self.x_ub = x(max_tank_level)
 
         # Do not change bounds for soft constraint slack variables
         self.eps_lb = eps(0)
@@ -149,7 +151,7 @@ class go_mpc:
 
         # Further (non-linear) constraints:
         self.nl_cons = struct_MX([
-            entry('tank_press', expr=self.x['tank_press']+self.eps['tank_press']),
+            entry('tank_press_lb', expr=self.x['tank_press']+self.eps['tank_press_lb']),
             entry('jun_cl_press_min', expr=jun_cl_press_min),
             entry('pump_energy', expr=pump_energy)
         ])
@@ -159,7 +161,7 @@ class go_mpc:
 
         self.nl_lb['jun_cl_press_min'] = 0
         #self.nl_lb['pump_energy'] = 0
-        self.nl_lb['tank_press'] = 1
+        self.nl_lb['tank_press_lb'] = 1
 
         self.nl_cons_fun = Function('nl_cons', [x, u, tvp, p_set, eps], [self.nl_cons])
 
@@ -168,8 +170,8 @@ class go_mpc:
         model: define cost function
         --------------------------------------------------------------------------
         """
-        # lterm = sum1(x.cat-5)**2  # +sum1((jun_cl_press_min-50)**2)
-        lterm = sum1(pump_energy)/100 + 1e3*sum1(eps.cat**2)
+        lterm = sum1(x.cat-4)**2  # +sum1((jun_cl_press_min-50)**2)
+        #lterm = sum1(pump_energy)/100 + 1e4*sum1(eps.cat**2)
         mterm = 0
         self.rterm_factor = 1e-7
 
@@ -259,10 +261,10 @@ class go_mpc:
             self.lb_obj_x['eps', k] = self.eps_lb
             self.ub_obj_x['eps', k] = self.eps_ub
 
-        obj += self.mterm_fun(obj_x['x', k+1])
+        obj += self.mterm_fun(obj_x['x', self.n_horizon])
 
-        self.lb_obj_x['x', k+1] = self.x_terminal_lb
-        self.ub_obj_x['x', k+1] = self.x_terminal_ub
+        self.lb_obj_x['x', self.n_horizon] = self.x_terminal_lb
+        self.ub_obj_x['x', self.n_horizon] = self.x_terminal_ub
 
         cons = vertcat(*cons)
         self.cons_lb = vertcat(*cons_lb)
@@ -278,9 +280,9 @@ class go_mpc:
         optim_opts["ipopt.linear_solver"] = 'ma27'
         # NOTE: this could be passed as parameters of the optimizer class
         optim_opts["ipopt.max_iter"] = 200
-        optim_opts["ipopt.ma27_la_init_factor"] = 50.0
-        optim_opts["ipopt.ma27_liw_init_factor"] = 50.0
-        optim_opts["ipopt.ma27_meminc_factor"] = 10.0
+        # optim_opts["ipopt.ma27_la_init_factor"] = 50.0
+        # optim_opts["ipopt.ma27_liw_init_factor"] = 50.0
+        # optim_opts["ipopt.ma27_meminc_factor"] = 10.0
         optim_opts["ipopt.tol"] = 1e-6
         if not cas_verbose:
             optim_opts["ipopt.print_level"] = 0

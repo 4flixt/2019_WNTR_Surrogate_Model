@@ -5,6 +5,7 @@ import os
 import pandas as pd
 # import sklearn
 import numpy as np
+import scipy.io as sio
 import matplotlib.pyplot as plt
 from multiprocessing import Process
 
@@ -59,7 +60,7 @@ min_control = np.array([0., 0., 0., 0., 0., 0., 0., 0., 0.])  # Lower bondary fo
 max_control = np.array([2., 2., 2., 2., 2., 600.0, 600.0, 600.0, 70.])  # Upper bondary for controls
 
 # Load clustering information:
-nn_model_path = './model/006_man_5x50_both_datasets_filtered_mpc01/'
+nn_model_path = './model/007_man_5x50_both_datasets_filtered_mpc02/'
 cluster_labels = pd.read_json(nn_model_path+'cluster_labels_dt1h_both_datasets.json')
 pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h_both_datasets.json')
 
@@ -67,6 +68,8 @@ pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h_both_datasets
 n_horizon = 10
 gmpc = go_mpc(n_horizon)
 
+
+x_mpc_full = np.empty((0, gmpc.obj_x_num.shape[0]))
 # Plotting function:
 
 
@@ -155,7 +158,7 @@ for t in range(simTimeSteps):
     if t == 0:
         x0 = np.array([3, 3, 2.5, 5.2, 1, 0.5, 2.5])
     else:
-        x0 = results.tankLevels.iloc[t-1].to_numpy()
+        x0 = np.maximum(results.tankLevels.iloc[t-1].to_numpy(), 1e-3)
         print(results.tankLevels.iloc[t-1])
 
     """
@@ -170,6 +173,9 @@ for t in range(simTimeSteps):
 
     gmpc.solve()
     control_vector = gmpc.obj_x_num['u', 0].full().flatten()
+
+    if True:
+        x_mpc_full = np.append(x_mpc_full, gmpc.obj_x_num.cat.full().T, axis=0)
 
     if False:
         if t >= 1:
@@ -192,9 +198,12 @@ for t in range(simTimeSteps):
     results.press_cl_min = results.node['pressure'][nodeNames[2]].groupby(cluster_labels.loc['pressure_cluster'], axis=1).min()
 
     # ::: Saving simulation output
-    with open("tempResults/02_results_sim_time.pkl", "wb") as f:
+    with open("tempResults/03_results_sim_time.pkl", "wb") as f:
         pickle.dump(results, f)
         f.close()
+
+    sio.savemat('./tempResults/03_full_mpc_solution.mat', {'x_mpc_full': x_mpc_full})
+
     tempInpFile = "tempResults/tempInpFile_time%s.inp" % t
     ctown.wn.write_inpfile(tempInpFile)
     print('-----------------------------------------------------------')
