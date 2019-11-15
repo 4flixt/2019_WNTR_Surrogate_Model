@@ -198,11 +198,11 @@ for t in range(simTimeSteps):
     results.press_cl_min = results.node['pressure'][nodeNames[2]].groupby(cluster_labels.loc['pressure_cluster'], axis=1).min()
 
     # ::: Saving simulation output
-    with open("tempResults/03_results_sim_time.pkl", "wb") as f:
+    with open("tempResults/04_results_sim_time.pkl", "wb") as f:
         pickle.dump(results, f)
         f.close()
 
-    sio.savemat('./tempResults/03_full_mpc_solution.mat', {'x_mpc_full': x_mpc_full})
+    sio.savemat('./tempResults/04_full_mpc_solution.mat', {'x_mpc_full': x_mpc_full})
 
     tempInpFile = "tempResults/tempInpFile_time%s.inp" % t
     ctown.wn.write_inpfile(tempInpFile)
