@@ -12,7 +12,7 @@ sys.path.append('../')
 from testWN import testWN as twm
 
 
-def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_input=True, narx_output=False, return_lists=False, inp_file=None):
+def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_input=True, narx_output=False, return_lists=False, inp_file=None, shift_x=False):
     """
     --------------------------------------------------
     Get network informations
@@ -118,6 +118,9 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
         }
 
         sys_states = pd.concat(state_dict.values(), axis=1, keys=state_dict.keys())
+
+        if shift_x:
+            sys_states = sys_states.shift(1, axis=0)
 
         input_dict = {  # 'head_pump_speed': head_pump_speed,
             'head_pump_speed': head_pump_speed_corr,
