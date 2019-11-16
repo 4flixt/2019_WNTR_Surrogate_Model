@@ -49,9 +49,9 @@ Load Results
 -------------------------------------------------------
 """
 data_path = './tempResults/'
-mpc_res_full = sio.loadmat(data_path + '03_full_mpc_solution.mat')['x_mpc_full']
+mpc_res_full = sio.loadmat(data_path + '04_full_mpc_solution.mat')['x_mpc_full']
 
-with open(data_path+'03_results_sim_time.pkl', 'rb') as f:
+with open(data_path+'04_results_sim_time.pkl', 'rb') as f:
     results = pickle.load(f)
 
 
