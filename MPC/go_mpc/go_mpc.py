@@ -17,7 +17,7 @@ class go_mpc:
 
         self.n_horizon = n_horizon
 
-        self.create_model(min_control, max_control)
+        self.create_model(nn_model_path, nn_model_name, cluster_labels, pressure_factor, min_control, max_control)
         self.create_optim(cas_verbose)
 
     def create_model(self, nn_model_path, nn_model_name, cluster_labels, pressure_factor, min_control, max_control):

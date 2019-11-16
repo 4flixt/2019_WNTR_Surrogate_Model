@@ -22,7 +22,7 @@ matplotlib.rcParams['font.size'] = 12
 matplotlib.rcParams['axes.unicode_minus'] = False
 matplotlib.rcParams['svg.fonttype'] = 'none'
 
-output_format = 'gif'
+output_format = ''
 """
 -------------------------------------------------------
 Load Network
@@ -41,7 +41,14 @@ pv_df = pd.concat((pump_df, valves_df), axis=1)
 nw_node_df = pd.DataFrame(ctown.wn.nodes.todict())
 nw_link_df = pd.DataFrame(ctown.wn.links.todict())
 
-gmpc = go_mpc(n_horizon=10)
+
+n_horizon = 10
+nn_model_path = './model/007_man_5x50_both_datasets_filtered_mpc02/'
+nn_model_name = '007_man_5x50_both_datasets_filtered_mpc02'
+cluster_labels = pd.read_json(nn_model_path+'cluster_labels_dt1h_both_datasets.json')
+pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h_both_datasets.json')
+gmpc = go_mpc(n_horizon, nn_model_path, nn_model_name, cluster_labels, pressure_factor, 0, 1)
+
 
 """
 -------------------------------------------------------
@@ -49,9 +56,9 @@ Load Results
 -------------------------------------------------------
 """
 data_path = './tempResults/'
-mpc_res_full = sio.loadmat(data_path + '04_full_mpc_solution.mat')['x_mpc_full']
+mpc_res_full = sio.loadmat(data_path + '05_full_mpc_solution.mat')['x_mpc_full']
 
-with open(data_path+'04_results_sim_time.pkl', 'rb') as f:
+with open(data_path+'05_results_sim_time.pkl', 'rb') as f:
     results = pickle.load(f)
 
 
@@ -71,9 +78,10 @@ ax3.get_xaxis().set_visible(False)
 
 ax4.yaxis.tick_right()
 ax4.yaxis.set_label_position("right")
-ax4.get_xaxis().set_visible(False)
 
 fig.align_ylabels()
+fig.tight_layout()
+fig.tight_layout(pad=0.1)
 
 results.node['pressure'][node_names[0]].head()
 tank_level = results.node['pressure'][node_names[0]].to_numpy()
@@ -173,7 +181,7 @@ def update(t):
 # update(1)
 # update(2)
 
-anim = FuncAnimation(fig, update, frames=50, repeat=False)
+anim = FuncAnimation(fig, update, frames=time.shape[0], repeat=False)
 
 if 'mp4' in output_format:
     FFWriter = FFMpegWriter(fps=6, extra_args=['-vcodec', 'libx264'])

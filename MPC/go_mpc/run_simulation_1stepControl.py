@@ -72,6 +72,7 @@ gmpc = go_mpc(n_horizon, nn_model_path, nn_model_name, cluster_labels, pressure_
 
 # Create container to store full MPC solution:
 x_mpc_full = np.empty((0, gmpc.obj_x_num.shape[0]))
+mpc_aux_full = np.empty((0, gmpc.obj_aux_num.shape[0]))
 mpc_flag = []
 # Plotting function:
 
@@ -179,6 +180,7 @@ for t in range(simTimeSteps):
 
     if True:
         x_mpc_full = np.append(x_mpc_full, gmpc.obj_x_num.cat.full().T, axis=0)
+        mpc_aux_full = np.append(x_mpc_full, gmpc.obj_aux_num.cat.full().T, axis=0)
         mpc_flag.append(gmpc.solver_stats)
         pdb.set_trace()
 
@@ -207,7 +209,7 @@ for t in range(simTimeSteps):
         pickle.dump(results, f)
         f.close()
 
-    sio.savemat('./tempResults/{}_full_mpc_sol.mat'.format(result_name), {'x_mpc_full': x_mpc_full})
+    sio.savemat('./tempResults/{}_full_mpc_sol.mat'.format(result_name), {'x_mpc_full': x_mpc_full, 'mpc_aux_full': mpc_aux_fullb})
 
     tempInpFile = "tempResults/{}_tempInpFile.inp".format(result_name)
     ctown.wn.write_inpfile(tempInpFile)
