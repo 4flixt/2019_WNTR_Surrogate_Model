@@ -38,7 +38,6 @@ nDaysSim = 30
 nHourDay = 24
 simTimeSteps = nDaysSim*nHourDay  # Sampling frequency of 15 min
 
-controlTvary = 8  # Number of time steps for varying controls (if set to 8 -> controls are stable for 2 hours)
 
 ctown.wn.options.time.hydraulic_timestep = 3600  # 1 hr
 ctown.wn.options.time.quality_timestep = 3600  # 1 hr
@@ -61,15 +60,19 @@ max_control = np.array([2., 2., 2., 2., 2., 600.0, 600.0, 600.0, 70.])  # Upper 
 
 # Load clustering information:
 nn_model_path = './model/007_man_5x50_both_datasets_filtered_mpc02/'
+nn_model_name = '007_man_5x50_both_datasets_filtered_mpc02'
 cluster_labels = pd.read_json(nn_model_path+'cluster_labels_dt1h_both_datasets.json')
 pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h_both_datasets.json')
 
+result_name = '005_mod_007_results'
+
 # Create controller:
 n_horizon = 10
-gmpc = go_mpc(n_horizon)
+gmpc = go_mpc(n_horizon, nn_model_path, nn_model_name, cluster_labels, pressure_factor, min_control, max_control)
 
-
+# Create container to store full MPC solution:
 x_mpc_full = np.empty((0, gmpc.obj_x_num.shape[0]))
+mpc_flag = []
 # Plotting function:
 
 
@@ -176,6 +179,8 @@ for t in range(simTimeSteps):
 
     if True:
         x_mpc_full = np.append(x_mpc_full, gmpc.obj_x_num.cat.full().T, axis=0)
+        mpc_flag.append(gmpc.solver_stats)
+        pdb.set_trace()
 
     if False:
         if t >= 1:
@@ -198,13 +203,13 @@ for t in range(simTimeSteps):
     results.press_cl_min = results.node['pressure'][nodeNames[2]].groupby(cluster_labels.loc['pressure_cluster'], axis=1).min()
 
     # ::: Saving simulation output
-    with open("tempResults/05_results_sim_time.pkl", "wb") as f:
+    with open("tempResults/{}_sim_time.pkl".format(result_name), "wb") as f:
         pickle.dump(results, f)
         f.close()
 
-    sio.savemat('./tempResults/04_full_mpc_solution.mat', {'x_mpc_full': x_mpc_full})
+    sio.savemat('./tempResults/{}_full_mpc_sol.mat'.format(result_name), {'x_mpc_full': x_mpc_full})
 
-    tempInpFile = "tempResults/tempInpFile_time%s.inp" % t
+    tempInpFile = "tempResults/{}_tempInpFile.inp".format(result_name)
     ctown.wn.write_inpfile(tempInpFile)
     print('-----------------------------------------------------------')
     print('Step {} of {}'.format(t, simTimeSteps))
