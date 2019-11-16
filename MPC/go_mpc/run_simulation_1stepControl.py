@@ -55,16 +55,16 @@ nodeNames = ctown.getNodeName()
 
 # ::: Setting upper and lower bounds to control elements
 control_components = ctown.wn.pump_name_list + ctown.wn.valve_name_list
-min_control = np.array([0., 0., 0., 0., 0., 0., 0., 0., 0.])  # Lower bondary for controls
+min_control = np.array([0.36, 0.66, 0.66, 0.56, 0.56, 0., 0., 0., 0.])  # Lower bondary for controls
 max_control = np.array([2., 2., 2., 2., 2., 600.0, 600.0, 600.0, 70.])  # Upper bondary for controls
 
 # Load clustering information:
-nn_model_path = './model/007_man_5x50_both_datasets_filtered_mpc02/'
-nn_model_name = '007_man_5x50_both_datasets_filtered_mpc02'
-cluster_labels = pd.read_json(nn_model_path+'cluster_labels_dt1h_both_datasets.json')
-pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h_both_datasets.json')
+nn_model_path = './model/008_man_5x50_both_datasets_filtered_mpc02/'
+nn_model_name = '008_man_5x50_both_datasets_filtered_mpc02'
+cluster_labels = pd.read_json(nn_model_path+'cluster_labels_with_mpc.json')
+pressure_factor = pd.read_json(nn_model_path+'pressure_factor_with_mpc.json')
 
-result_name = '005_mod_007_results'
+result_name = '006_mod_007_results'
 
 # Create controller:
 n_horizon = 10
@@ -180,11 +180,10 @@ for t in range(simTimeSteps):
 
     if True:
         x_mpc_full = np.append(x_mpc_full, gmpc.obj_x_num.cat.full().T, axis=0)
-        mpc_aux_full = np.append(x_mpc_full, gmpc.obj_aux_num.cat.full().T, axis=0)
-        mpc_flag.append(gmpc.solver_stats)
-        pdb.set_trace()
+        mpc_aux_full = np.append(mpc_aux_full, gmpc.obj_aux_num.cat.full().T, axis=0)
+        mpc_flag.append(gmpc.solver_stats['success'])
 
-    if False:
+    if True:
         if t >= 1:
             if t >= 2:
                 p.terminate()
@@ -209,7 +208,7 @@ for t in range(simTimeSteps):
         pickle.dump(results, f)
         f.close()
 
-    sio.savemat('./tempResults/{}_full_mpc_sol.mat'.format(result_name), {'x_mpc_full': x_mpc_full, 'mpc_aux_full': mpc_aux_fullb})
+    sio.savemat('./tempResults/{}_full_mpc_sol.mat'.format(result_name), {'x_mpc_full': x_mpc_full, 'mpc_aux_full': mpc_aux_full, 'mpc_flag': mpc_flag})
 
     tempInpFile = "tempResults/{}_tempInpFile.inp".format(result_name)
     ctown.wn.write_inpfile(tempInpFile)
