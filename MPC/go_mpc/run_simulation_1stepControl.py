@@ -64,7 +64,7 @@ nn_model_name = '008_man_5x50_both_datasets_filtered_mpc02'
 cluster_labels = pd.read_json(nn_model_path+'cluster_labels_with_mpc.json')
 pressure_factor = pd.read_json(nn_model_path+'pressure_factor_with_mpc.json')
 
-result_name = '009_mod_008_results'
+result_name = '010_mod_008_results'
 
 # Create controller:
 n_horizon = 10
@@ -147,8 +147,8 @@ for t in range(simTimeSteps):
     """
     startT = t
     dt_hyd = ctown.wn.options.time.hydraulic_timestep
-    lbound_noise = 0.8
-    ubound_noise = 1.2
+    lbound_noise = 0.6
+    ubound_noise = 1.4
     demand_pred = ctown.forecast_demand_gnoise(n_horizon, startT*dt_hyd, dt_hyd, lbound_noise, ubound_noise)
 
     time_arr = np.arange(dt_hyd*t, dt_hyd*(t+n_horizon+1), dt_hyd)-dt_hyd
