@@ -64,7 +64,7 @@ nn_model_name = '008_man_5x50_both_datasets_filtered_mpc02'
 cluster_labels = pd.read_json(nn_model_path+'cluster_labels_with_mpc.json')
 pressure_factor = pd.read_json(nn_model_path+'pressure_factor_with_mpc.json')
 
-result_name = '007_mod_008_results'
+result_name = '008_mod_008_results'
 
 # Create controller:
 n_horizon = 10
