@@ -108,6 +108,7 @@ class go_mpc:
         # Softconstraint slack variables:
         self.eps = eps = struct_symMX([
             entry('tank_press_lb', shape=(7, 1)),
+        #    entry('jun_cl_press_min', shape=(30,1)),
         ])
 
         # For states
@@ -140,7 +141,7 @@ class go_mpc:
 
         self.nl_lb['jun_cl_press_min'] = 0
         self.nl_lb['pump_energy'] = 0
-        self.nl_lb['tank_press_lb'] = 2
+        self.nl_lb['tank_press_lb'] = 1
 
         self.nl_cons_fun = Function('nl_cons', [x, u, tvp, p_set, eps], [self.nl_cons])
 
@@ -150,7 +151,7 @@ class go_mpc:
         --------------------------------------------------------------------------
         """
         # lterm = sum1(x.cat-2)**2  # +sum1((jun_cl_press_min-50)**2)
-        lterm = sum1(pump_energy)/100 + 1e4*sum1(eps.cat**2)
+        lterm = sum1(pump_energy)/100 + 1e4*sum1(eps['tank_press_lb']**2)
         mterm = 0
         # Penalize changes in the control input from t_k to t_k+1:
         self.rterm_factor = 1e-3
