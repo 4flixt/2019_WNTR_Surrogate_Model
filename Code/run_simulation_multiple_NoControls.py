@@ -22,7 +22,8 @@ import random
 # In[3]:
 
 
-inp_file = '../Code/c-town_true_network_simplified.inp'
+#inp_file = '../Code/c-town_true_network_simplified.inp'
+inp_file = '../Code/c-town_true_network_initialOpen.inp'
 ctown = twm(inp_file)
 
 # # Setting up multiple simulations for AI training
@@ -84,7 +85,7 @@ for i in range(150): # Number of simulations
     results.energy = economics.pump_energy(results.link['flowrate'], results.node['head'], ctown.wn)
     
     # ::: Saving simulation output
-    with open("results_sim_%s_noControls.pkl" % i, "wb") as f:
+    with open("results_sim_%s_noControls_fullCtown.pkl" % i, "wb") as f:
         pickle.dump(results, f)
         f.close()
 

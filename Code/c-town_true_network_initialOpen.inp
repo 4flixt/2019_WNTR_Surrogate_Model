@@ -370,17 +370,27 @@
  J235            	53          	.2529269    	DMA4_pat        	;
  J240            	87          	.9883186    	DMA2_pat        	;
  J269            	56          	0           	                	;
+ J273            	56          	0           	                	;
+ J274            	56          	0           	                	;
+ J276            	56          	0           	                	;
  J280            	56          	0           	                	;
+ J285            	56          	0           	                	;
  J287            	40          	0           	                	;
  J288            	40          	0           	                	;
  J289            	40          	0           	                	;
+ J290            	40          	0           	                	;
+ J291            	65          	0           	                	;
+ J292            	40          	0           	                	;
+ J299            	40          	0           	                	;
  J300            	40          	0           	                	;
  J301            	44          	0           	                	;
  J302            	44          	0           	                	;
  J304            	44          	0           	                	;
  J306            	44          	0           	                	;
  J307            	44          	0           	                	;
+ J309            	44          	0           	                	;
  J317            	44          	0           	                	;
+ J323            	44          	0           	                	;
 
 [RESERVOIRS]
 ;ID              	Head        	Pattern         
@@ -567,7 +577,11 @@
  P31             	J171            	J186            	144.67      	152         	108.7731191 	0           	Open  	;
  P310            	J269            	J156            	9           	610         	87.26802597 	0           	Open  	;
  P316            	R1              	J280            	11.62       	610         	70.45194642 	0           	Open  	;
+ P319            	J274            	J269            	10.54       	610         	76.59274096 	0           	Open  	;
  P32             	J186            	J2              	84.44       	152         	103.5584403 	0           	Open  	;
+ P320            	J273            	J269            	11.47       	610         	76.51881041 	0           	Open  	;
+ P322            	J280            	J285            	11.5        	610         	89.43312359 	0           	Open  	;
+ P323            	J280            	J276            	11.47       	610         	84.68719833 	0           	Open  	;
  P329            	J503            	J501            	134.52      	152         	100.1835818 	0           	Open  	;
  P33             	J1219           	J179            	22.81       	254         	73.03598003 	0           	Open  	;
  P330            	J501            	J499            	66.79       	76          	96.42287802 	0           	Open  	;
@@ -591,8 +605,12 @@
  P372            	J219            	J86             	6.42        	101.6       	113.1146519 	0           	Open  	;
  P374            	J287            	J288            	15.83       	254         	91.91560418 	0           	Open  	;
  P375            	J288            	J300            	7.79        	254         	75.48935679 	0           	Open  	;
+ P376            	J300            	J299            	6.64        	254         	102.6856466 	0           	Open  	;
+ P378            	J292            	J256            	6.47        	254         	112.4496521 	0           	Open  	;
  P379            	J287            	J289            	6.43        	254         	101.7753453 	0           	Open  	;
  P38             	J55             	J56             	169.49      	76          	106.4650405 	0           	Open  	;
+ P380            	J289            	J290            	4.79        	254         	87.81324875 	0           	Open  	;
+ P381            	J291            	J415            	5.53        	304.8       	119.20713   	0           	Open  	;
  P383            	J571            	J491            	19.56       	152         	80.14926659 	0           	Open  	;
  P384            	J491            	J575            	26.14       	76          	101.9126563 	0           	Open  	;
  P385            	J498            	J134            	106.53      	305         	76.02373041 	0           	Open  	;
@@ -602,8 +620,10 @@
  P398            	J301            	J302            	6.75        	203.2       	91.05042408 	0           	Open  	;
  P399            	J302            	J307            	9.71        	203.2       	81.41362338 	0           	Open  	;
  P40             	J59             	J60             	143.64      	102         	107.9143544 	0           	Open  	;
+ P402            	J307            	J309            	6.12        	203.2       	89.1549467  	0           	Open  	;
  P403            	J304            	J306            	6.86        	152.4       	111.4725023 	0           	Open  	;
  P409            	J306            	J87             	26.38       	152.4       	89.89786692 	0           	Open  	;
+ P410            	J323            	J317            	7.7         	203.2       	85.6676939  	0           	Open  	;
  P42             	J54             	J73             	32.93       	152         	114.9190666 	0           	Open  	;
  P424            	J317            	J384            	27.8        	203.2       	124.9856956 	0           	Open  	;
  P43             	J64             	J65             	36.18       	203         	88.53730832 	0           	Open  	;
@@ -820,15 +840,21 @@
 
 [PUMPS]
 ;ID              	Node1           	Node2           	Parameters
+ PU1             	J285            	J273            	HEAD 8	;
  PU2             	J280            	J269            	HEAD 8	;
+ PU3             	J276            	J274            	HEAD 8	;
+ PU4             	J299            	J292            	HEAD 9	;
  PU5             	J300            	J256            	HEAD 9	;
  PU6             	J289            	J415            	HEAD 10	;
+ PU7             	J290            	J291            	HEAD 10	;
  PU8             	J301            	J304            	HEAD 9	;
+ PU9             	J302            	J306            	HEAD 9	;
  PU10            	J307            	J317            	HEAD 11	;
+ PU11            	J309            	J323            	HEAD 11	;
 
 [VALVES]
 ;ID              	Node1           	Node2           	Diameter    	Type	Setting     	MinorLoss   
- V1              	J35             	J88             	203.2       	PRV 	40          	0.0000      	;
+ v1              	J35             	J88             	203.2       	PRV 	40          	0.0000      	;
  V45             	J253            	J130            	152.4       	PRV 	40          	0.0000      	;
  V47             	J129            	J169            	101.6       	PRV 	40          	0.0000      	;
  V2              	J14             	J422            	254         	TCV 	0           	0           	;
@@ -840,15 +866,17 @@
 
 [STATUS]
 ;ID              	Status/Setting
- PU2             	Closed	
- PU5             	Closed
- PU6             	Closed
- PU8             	Closed
- PU10            	Closed
- V2              	Closed
- V1              	Closed
- V45              	Closed
- V47             	Closed
+ PU1             	Open
+ PU3             	Open
+ PU4             	Open
+ PU5             	Open
+ PU6             	Open
+ PU7             	Open
+ PU8             	Open
+ PU9             	Open
+ PU10            	Open
+ PU11            	Open
+ V2              	Active
 
 [PATTERNS]
 ;ID              	Multipliers
@@ -1041,8 +1069,8 @@
  1               	138.8889    	1           
 ;PUMP:
  8               	0           	70          
- 8               	90          	50          
- 8               	150         	30          
+ 8               	60          	50          
+ 8               	100         	30          
 ;PUMP:
  9               	0           	90          
  9               	30          	70          
@@ -1058,20 +1086,29 @@
 
 [CONTROLS]
 ; ----------- Tank 1 ---------------
-LINK          PU2 OPEN IF   NODE          T1            BELOW          4 
-LINK          PU2 CLOSED IF NODE          T1            ABOVE          6.3 
+LINK          PU1 OPEN IF   NODE          T1            BELOW          4 
+LINK          PU1 CLOSED IF NODE          T1            ABOVE          6.3 
+
+LINK          PU2 OPEN IF   NODE          T1            BELOW          1 
+LINK          PU2 CLOSED IF NODE          T1            ABOVE          4.5 
 
 ; ----------- Valve to T2 ---
 LINK          V2 OPEN IF    NODE          T2            BELOW          .5 
 LINK          V2 CLOSED IF  NODE          T2            ABOVE          5.5 
 
-; ----------- T3 ---  
-LINK          PU5 OPEN IF   NODE          T3            BELOW          3 
-LINK          PU5 CLOSED IF NODE          T3            ABOVE          5.3 
+; ----------- T3 ---
+LINK          PU4 OPEN IF   NODE          T3            BELOW          3 
+LINK          PU4 CLOSED IF NODE          T3            ABOVE          5.3 
+  
+LINK          PU5 OPEN IF   NODE          T3            BELOW          1 
+LINK          PU5 CLOSED IF NODE          T3            ABOVE          3.5 
 
 ; ----------- T4 ---
-LINK          PU6 OPEN IF   NODE          T4            BELOW          3 
+LINK          PU6 OPEN IF   NODE          T4            BELOW          2 
 LINK          PU6 CLOSED IF NODE          T4            ABOVE          3.5 
+
+LINK          PU7 OPEN IF   NODE          T4            BELOW          3 
+LINK          PU7 CLOSED IF NODE          T4            ABOVE          4.5 
 
 ; ----------- T5 ---
 LINK          PU8 OPEN IF   NODE          T5            BELOW          1.5 
@@ -1079,7 +1116,13 @@ LINK          PU8 CLOSED IF NODE          T5            ABOVE          4.5
 
 ; ----------- T7 ---
 LINK          PU10 OPEN IF  NODE          T7            BELOW          2.5 
-LINK          PU10 CLOSED IF              NODE          T7            ABOVE          4.8
+LINK          PU10 CLOSED IF              NODE          T7            ABOVE          4.8 
+  
+LINK          PU11 OPEN IF  NODE          T7            BELOW          1 
+LINK          PU11 CLOSED IF              NODE          T7            ABOVE          3 
+
+
+
 
 
 
@@ -1107,11 +1150,17 @@ LINK          PU10 CLOSED IF              NODE          T7            ABOVE     
  Global Efficiency  	70.0000
  Global Price       	0
  Demand Charge      	0.0000
+ Pump 	PU1             	Price     	1.0000
  Pump 	PU2             	Price     	1.0000
+ Pump 	PU3             	Price     	1.0000
+ Pump 	PU4             	Price     	1.0000
  Pump 	PU5             	Price     	1.0000
  Pump 	PU6             	Price     	1.0000
+ Pump 	PU7             	Price     	1.0000
  Pump 	PU8             	Price     	1.0000
+ Pump 	PU9             	Price     	1.0000
  Pump 	PU10            	Price     	1.0000
+ Pump 	PU11            	Price     	1.0000
 
 [EMITTERS]
 ;Junction        	Coefficient
@@ -1541,17 +1590,27 @@ LINK          PU10 CLOSED IF              NODE          T7            ABOVE     
  J235            	-247969.12      	148829.60       
  J240            	-246342.65      	150698.77       
  J269            	-246215.91      	147789.08       
+ J273            	-246215.91      	147936.37       
+ J274            	-246215.91      	147665.55       
+ J276            	-246040.11      	147665.55       
  J280            	-246044.87      	147793.83       
+ J285            	-246044.87      	147936.37       
  J287            	-246866.83      	149090.92       
  J288            	-246657.78      	149109.93       
  J289            	-246743.30      	149238.21       
+ J290            	-246586.51      	149204.95       
+ J291            	-246496.02      	149416.56       
+ J292            	-246657.78      	148791.59       
+ J299            	-246596.01      	148948.38       
  J300            	-246672.03      	149014.90       
  J301            	-247232.22      	149649.69       
  J302            	-247066.38      	149722.84       
  J304            	-247394.22      	149827.36       
  J306            	-247265.94      	149903.38       
  J307            	-246942.85      	149566.05       
+ J309            	-247094.89      	149613.56       
  J317            	-247023.62      	149361.74       
+ J323            	-247170.91      	149409.25       
  R1              	-245840.56      	147793.83       
  T3              	-246422.40      	148459.51       
  T1              	-249114.17      	149950.90       
@@ -1567,7 +1626,7 @@ LINK          PU10 CLOSED IF              NODE          T7            ABOVE     
 [LABELS]
 ;X-Coord           Y-Coord          Label & Anchor Node
  -245964.09       147727.31        "Source" R1              
- -246572.25       148116.92        "Pumping Station S1" J280            
+ -246572.25       148116.92        "Pumping Station S1" J285            
  -249280.46       150121.94        "Tank T1" T1              
  -247584.27       149585.05        "T7" T7              
  -246904.84       148601.54        "T2" T2              
@@ -1578,8 +1637,8 @@ LINK          PU10 CLOSED IF              NODE          T7            ABOVE     
  -247071.13       149285.72        "T6" T6              
  -246596.01       149105.18        "S2" J300            
  -247551.01       149832.12        "S4" J304            
- -247318.20       149585.05        "S5" J317           
- -246486.73       149328.48        "S3" J289            
+ -247318.20       149585.05        "S5" J323            
+ -246486.73       149328.48        "S3" J291            
 
 [BACKDROP]
  DIMENSIONS     	-249469.32      	147238.65       	-245209.84      	151508.59       
