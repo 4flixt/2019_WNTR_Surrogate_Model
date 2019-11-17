@@ -64,7 +64,7 @@ class go_mpc:
 
         # time-varying parameter struct (parameters for optimization problem):
         self.tvp = tvp = struct_symMX([
-            entry('jun_cl_demand_sum', shape=(30, 1)),
+            entry('jun_cl_demand_sum', shape=(40, 1)),
             entry('u_prev', struct=u),
         ])
 
@@ -108,11 +108,12 @@ class go_mpc:
         # Softconstraint slack variables:
         self.eps = eps = struct_symMX([
             entry('tank_press_lb', shape=(7, 1)),
-        #    entry('jun_cl_press_min', shape=(30,1)),
+            entry('jun_cl_press_min', shape=(40,1)),
+            entry('pump_energy', shape=(5,1))
         ])
 
         # For states
-        self.x_lb = x(0)
+        self.x_lb = x(-0.1)
         # From INP file:
         max_tank_level = np.array([6.75, 6.5, 5, 5.5, 4.5, 5.9, 4.7])+1e-3
         self.x_ub = x(max_tank_level)
@@ -132,8 +133,8 @@ class go_mpc:
         # Further (non-linear) constraints:
         self.nl_cons = struct_MX([
             entry('tank_press_lb',    expr=self.x['tank_press']+self.eps['tank_press_lb']),
-            entry('jun_cl_press_min', expr=jun_cl_press_min),
-            entry('pump_energy',      expr=pump_energy)
+            entry('jun_cl_press_min', expr=jun_cl_press_min+self.eps['jun_cl_press_min']),
+            entry('pump_energy',      expr=pump_energy+self.eps['pump_energy'])
         ])
 
         self.nl_ub = self.nl_cons(np.inf)
@@ -141,7 +142,7 @@ class go_mpc:
 
         self.nl_lb['jun_cl_press_min'] = 0
         self.nl_lb['pump_energy'] = 0
-        self.nl_lb['tank_press_lb'] = 2
+        self.nl_lb['tank_press_lb'] = 1
 
         self.nl_cons_fun = Function('nl_cons', [x, u, tvp, p_set, eps], [self.nl_cons])
 
@@ -151,10 +152,10 @@ class go_mpc:
         --------------------------------------------------------------------------
         """
         #lterm = sum1(x.cat-2)**2  # +sum1((jun_cl_press_min-50)**2)
-        lterm = sum1(pump_energy)/100 + 1e4*sum1(eps['tank_press_lb']**2)
+        lterm = sum1(pump_energy)/100 + 1e6*sum1(eps.cat)
         mterm = 0
         # Penalize changes in the control input from t_k to t_k+1:
-        self.rterm_factor = 1e-3
+        self.rterm_factor = 1e-2
 
         self.lterm_fun = Function('lterm', [x, u, tvp, p_set, eps], [lterm])
         self.mterm_fun = Function('mterm_fun', [x], [mterm])
