@@ -56,13 +56,13 @@ Load Results
 -------------------------------------------------------
 """
 data_path = './tempResults/'
-mpc_res_full = sio.loadmat(data_path + '05_full_mpc_solution.mat')['x_mpc_full']
+mpc_res_full = sio.loadmat(data_path + '006_mod_007_results_full_mpc_sol.mat')['x_mpc_full']
 
-with open(data_path+'05_results_sim_time.pkl', 'rb') as f:
+with open(data_path+'006_mod_007_results_sim_time.pkl', 'rb') as f:
     results = pickle.load(f)
 
 
-fig = plt.figure(figsize=(10, 5))
+fig = plt.figure(figsize=(12, 5))
 ax1 = plt.subplot2grid((3, 3), (0, 0), rowspan=3)
 ax2 = plt.subplot2grid((3, 3), (0, 1), colspan=2)
 ax3 = plt.subplot2grid((3, 3), (1, 1), colspan=2, sharex=ax2)
@@ -78,6 +78,11 @@ ax3.get_xaxis().set_visible(False)
 
 ax4.yaxis.tick_right()
 ax4.yaxis.set_label_position("right")
+
+ax2.set_ylabel('Tank level [m]')
+ax3.set_ylabel('Pump speed [-]')
+ax4.set_ylabel('Normalized \n valve setting [-]')
+ax4.set_xlabel('time [h]')
 
 fig.align_ylabels()
 fig.tight_layout()
@@ -110,17 +115,17 @@ def update(t):
     valves_now = results.link['setting'][link_names[2]].iloc[t]/np.array([600, 600, 600, 70])
     pumps_now = results.link['setting'][link_names[0]].iloc[t]
 
-    wntr.graphics.plot_network(ctown.wn, node_attribute=press_now[node_names[2]], node_size=50,
-                               node_cmap='gray', add_colorbar=True, ax=ax1)  # CMRmap
+    wntr.graphics.plot_network(ctown.wn, node_attribute=press_now[node_names[2]], node_size=25,
+                               node_cmap='CMRmap', add_colorbar=True, ax=ax1)  # CMRmap
 
     mesh = ax1.collections[1]
-    mesh.set_clim(0, 400)
+    mesh.set_clim(0, 200)
 
     for i, link_i in enumerate(link_names[0]):
         start_i = nw_link_df[link_i].loc['start_node'].__dict__['_coordinates']
         end_i = nw_link_df[link_i].loc['end_node'].__dict__['_coordinates']
         data = np.array([start_i, end_i]).T
-        pump_line = ax1.plot(data[0], data[1], linewidth=pumps_now[link_i]*8, color=colors[i])
+        pump_line = ax1.plot(data[0], data[1], linewidth=pumps_now[link_i]*8, color=colors[0])
 
         # ax1.text(*start_i, link_i, ha="center", va="center",
         #          bbox=dict(boxstyle="round", ec='k', fc=colors[0], alpha=0.3))
@@ -129,21 +134,25 @@ def update(t):
         start_i = nw_link_df[link_i].loc['start_node'].__dict__['_coordinates']
         end_i = nw_link_df[link_i].loc['end_node'].__dict__['_coordinates']
         data = np.array([start_i, end_i]).T
-        valve_line = ax1.plot(data[0], data[1], linewidth=valves_now[link_i]*8, color=colors[i])
+        valve_line = ax1.plot(data[0], data[1], linewidth=valves_now[link_i]*8, color=colors[1])
 
         # ax1.text(*start_i, link_i, ha="center", va="center",
         #          bbox=dict(boxstyle="round", ec='k', fc=colors[1], alpha=0.3))
 
     for i, node_i in enumerate(node_names[0]):
         coords_i = nw_node_df[node_i].loc['coordinates']
-        tank_dot = ax1.scatter(coords_i[0], coords_i[1], s=20*press_now[node_i], color=colors[i])
+        tank_dot = ax1.scatter(coords_i[0], coords_i[1], s=20*press_now[node_i], color=colors[2])
         # ax1.text(*coords_i, node_i, ha="center", va="center",
         #          bbox=dict(boxstyle="round", ec='k', fc=colors[2], alpha=0.3))
 
         # ax1.text(*coords_i, node_i, ha="center", va="center",
         #          bbox=dict(boxstyle="round", ec='k', fc=colors[3], alpha=0.3))
 
-    #ax1.legend([pump_line]+[valve_line]+[tank_dot]+[res_dot], ['pumps', 'valves', 'tanks', 'reservoir'], loc='upper left')
+    for i, node_i in enumerate(node_names[1]):
+        coords_i = nw_node_df[node_i].loc['coordinates']
+        reservoir_dot = ax1.scatter(coords_i[0], coords_i[1], s=50, color=colors[3])
+
+    #ax1.legend(pump_line+valve_line+[tank_dot, reservoir_dot], ['pumps', 'valves', 'tanks', 'reservoir'], loc='upper left')
 
     # Get current x prediction:
     obj_x_now = gmpc.obj_x(mpc_res_full[t, :])
@@ -160,7 +169,7 @@ def update(t):
 
     pump_pred = horzcat(*obj_x_now['u', :, 'head_pump']).full().T
     # Tank level plot:
-    ax3.plot(time[t_start:t], pump_speed[t_start:t, :])
+    ax3.step(time[t_start:t], pump_speed[t_start:t, :])
     ax3.set_prop_cycle(None)
     ax3.step(time_pred[:-1], pump_pred, '--')
     ax3.set_ylabel('Pump speed [-]')
@@ -169,7 +178,7 @@ def update(t):
     PRvalve_pred = horzcat(*obj_x_now['u', :, 'PRValve']).full().T/600
     TCvalve_pred = horzcat(*obj_x_now['u', :, 'TCValve']).full().T/70
     valve_pred = np.concatenate((PRvalve_pred, TCvalve_pred), axis=1)
-    ax4.plot(time[t_start:t], norm_valve[t_start:t, :])
+    ax4.step(time[t_start:t], norm_valve[t_start:t, :])
     ax4.set_prop_cycle(None)
     ax4.step(time_pred[:-1], valve_pred, '--')
 
@@ -179,7 +188,6 @@ def update(t):
 
 
 # update(1)
-# update(2)
 
 anim = FuncAnimation(fig, update, frames=time.shape[0], repeat=False)
 
