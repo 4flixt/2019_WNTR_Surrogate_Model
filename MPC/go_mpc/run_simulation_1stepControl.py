@@ -147,9 +147,9 @@ for t in range(simTimeSteps):
     """
     startT = t
     dt_hyd = ctown.wn.options.time.hydraulic_timestep
-    addNoise = True
-    noise_mag = 0.1
-    demand_pred = ctown.forecast_demand_gnoise(n_horizon, startT*dt_hyd, dt_hyd, addNoise, noise_mag)
+    lbound_noise = 0.8
+    ubound_noise = 1.2
+    demand_pred = ctown.forecast_demand_gnoise(n_horizon, startT*dt_hyd, dt_hyd, lbound_noise, ubound_noise)
 
     time_arr = np.arange(dt_hyd*t, dt_hyd*(t+n_horizon+1), dt_hyd)-dt_hyd
     # Cluster demand:
