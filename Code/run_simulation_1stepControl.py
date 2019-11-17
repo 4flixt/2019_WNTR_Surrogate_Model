@@ -77,9 +77,10 @@ for t in range(simTimeSteps):
     # Forecasting water demand for the next k steps
     k = 24  # Time horizon for water demand prediction
     startT = t+1
-    addNoise = True
-    demand_pred = ctown.forecast_demand_gnoise(k, startT*ctown.wn.options.time.hydraulic_timestep, ctown.wn.options.time.hydraulic_timestep, addNoise)
-    pdb.set_trace()
+    lBound = 0.8
+    uBound = 1.2
+    demand_pred = ctown.forecast_demand_gnoise(k, startT*ctown.wn.options.time.hydraulic_timestep, ctown.wn.options.time.hydraulic_timestep, lBound, uBound)
+    #pdb.set_trace()
     # ::: Running the simulation
     start_time = time.time()
 
