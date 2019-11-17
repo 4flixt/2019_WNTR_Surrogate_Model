@@ -44,7 +44,7 @@ nw_link_df = pd.DataFrame(ctown.wn.links.todict())
 
 n_horizon = 10
 nn_model_path = './model/007_man_5x50_both_datasets_filtered_mpc02/'
-nn_model_name = '007_man_5x50_both_datasets_filtered_mpc02'
+nn_model_name = '008_man_5x50_both_datasets_filtered_mpc02'
 cluster_labels = pd.read_json(nn_model_path+'cluster_labels_dt1h_both_datasets.json')
 pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h_both_datasets.json')
 gmpc = go_mpc(n_horizon, nn_model_path, nn_model_name, cluster_labels, pressure_factor, 0, 1)
