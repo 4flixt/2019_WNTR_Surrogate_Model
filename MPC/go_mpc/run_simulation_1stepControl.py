@@ -56,7 +56,7 @@ nodeNames = ctown.getNodeName()
 # ::: Setting upper and lower bounds to control elements
 control_components = ctown.wn.pump_name_list + ctown.wn.valve_name_list
 min_control = np.array([0.36, 0.66, 0.66, 0.56, 0.56, 0., 0., 0., 0.])  # Lower bondary for controls
-max_control = np.array([2., 2., 2., 2., 2., 600.0, 600.0, 600.0, 70.])  # Upper bondary for controls
+max_control = np.array([1., 1., 1., 1., 1., 150.0, 150.0, 150.0, 70.])  # Upper bondary for controls
 
 # Load clustering information:
 nn_model_path = './model/008_man_5x50_both_datasets_filtered_mpc02/'
@@ -64,7 +64,7 @@ nn_model_name = '008_man_5x50_both_datasets_filtered_mpc02'
 cluster_labels = pd.read_json(nn_model_path+'cluster_labels_with_mpc.json')
 pressure_factor = pd.read_json(nn_model_path+'pressure_factor_with_mpc.json')
 
-result_name = '011_mod_008_results'
+result_name = '012_mod_008_results'
 
 # Create controller:
 n_horizon = 10
