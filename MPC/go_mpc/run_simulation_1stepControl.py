@@ -59,12 +59,12 @@ min_control = np.array([0.36, 0.66, 0.66, 0.56, 0.56, 0., 0., 0., 0.])  # Lower 
 max_control = np.array([1., 1., 1., 1., 1., 150.0, 150.0, 150.0, 70.])  # Upper bondary for controls
 
 # Load clustering information:
-nn_model_path = './model/010_man_5x60_only_mpc/'
-nn_model_name = '010_man_5x60_only_mpc'
-cluster_labels = pd.read_json(nn_model_path+'cluster_labels_only_mpc.json')
-pressure_factor = pd.read_json(nn_model_path+'pressure_factor_only_mpc.json')
+nn_model_path = './model/014_man_5x50_only_mpc_b0/'
+nn_model_name = '014_man_5x50_only_mpc_b0'
+cluster_labels = pd.read_json(nn_model_path+'cluster_labels_only_mpc_02.json')
+pressure_factor = pd.read_json(nn_model_path+'pressure_factor_only_mpc_02.json')
 
-result_name = '016_mod_010_results'
+result_name = '017_mod_014_results'
 
 # Create controller:
 n_horizon = 10

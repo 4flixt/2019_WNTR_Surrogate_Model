@@ -44,6 +44,7 @@ class go_mpc:
         output_scaling = train_data_param['output_scaling']
 
         jun_cl_press_fac_min = pressure_factor.groupby(cluster_labels.loc['pressure_cluster'], axis=1).min()
+        n_cluster = int(cluster_labels.loc['pressure_cluster'].max() +1)
 
         """
         --------------------------------------------------------------------------
@@ -64,7 +65,7 @@ class go_mpc:
 
         # time-varying parameter struct (parameters for optimization problem):
         self.tvp = tvp = struct_symMX([
-            entry('jun_cl_demand_sum', shape=(40, 1)),
+            entry('jun_cl_demand_sum', shape=(n_cluster, 1)),
             entry('u_prev', struct=u),
         ])
 
@@ -108,12 +109,12 @@ class go_mpc:
         # Softconstraint slack variables:
         self.eps = eps = struct_symMX([
             entry('tank_press_lb', shape=(7, 1)),
-            entry('jun_cl_press_min', shape=(40,1)),
+            entry('jun_cl_press_min', shape=(n_cluster,1)),
             entry('pump_energy', shape=(5,1))
         ])
 
         # For states
-        self.x_lb = x(-0.1)
+        self.x_lb = x(-1e-1)
         # From INP file:
         max_tank_level = np.array([6.75, 6.5, 5, 5.5, 4.5, 5.9, 4.7])+1e-3
         self.x_ub = x(max_tank_level)
