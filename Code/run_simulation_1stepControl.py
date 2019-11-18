@@ -19,6 +19,7 @@ import pdb
 
 # %% ::: Loading .inp file
 inp_file = '../Code/c-town_true_network_simplified_controls.inp'
+
 ctown = twm(inp_file)
 
 # %% ::: Setting up time and options for simulation
