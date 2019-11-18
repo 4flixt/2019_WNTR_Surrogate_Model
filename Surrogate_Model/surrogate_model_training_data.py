@@ -12,7 +12,7 @@ sys.path.append('../')
 from testWN import testWN as twm
 
 
-def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_input=True, narx_output=False, return_lists=False, inp_file=None, shift_x=False):
+def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_input=True, narx_output=False, return_lists=False, inp_file=None, shift_x=False, shift_aux_out=False):
     """
     --------------------------------------------------
     Get network informations
@@ -134,6 +134,9 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
                            'jun_cl_press_mean': jun_cl_press_mean, }
 
         aux_outputs = pd.concat(aux_output_dict.values(), axis=1, keys=aux_output_dict.keys())
+
+        if shift_aux_out:
+            aux_output = aux_outputs.shift(-1, axis=0)
 
         """
         --------------------------------------------------

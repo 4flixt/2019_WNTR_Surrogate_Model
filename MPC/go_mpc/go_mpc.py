@@ -44,6 +44,7 @@ class go_mpc:
         output_scaling = train_data_param['output_scaling']
 
         jun_cl_press_fac_min = pressure_factor.groupby(cluster_labels.loc['pressure_cluster'], axis=1).min()
+        n_cluster = int(cluster_labels.loc['pressure_cluster'].max() +1)
 
         """
         --------------------------------------------------------------------------
@@ -64,7 +65,7 @@ class go_mpc:
 
         # time-varying parameter struct (parameters for optimization problem):
         self.tvp = tvp = struct_symMX([
-            entry('jun_cl_demand_sum', shape=(40, 1)),
+            entry('jun_cl_demand_sum', shape=(n_cluster, 1)),
             entry('u_prev', struct=u),
         ])
 
@@ -108,12 +109,12 @@ class go_mpc:
         # Softconstraint slack variables:
         self.eps = eps = struct_symMX([
             entry('tank_press_lb', shape=(7, 1)),
-            entry('jun_cl_press_min', shape=(40,1)),
+            entry('jun_cl_press_min', shape=(n_cluster,1)),
             entry('pump_energy', shape=(5,1))
         ])
 
         # For states
-        self.x_lb = x(-0.1)
+        self.x_lb = x(-1e-1)
         # From INP file:
         max_tank_level = np.array([6.75, 6.5, 5, 5.5, 4.5, 5.9, 4.7])+1e-3
         self.x_ub = x(max_tank_level)
@@ -140,9 +141,9 @@ class go_mpc:
         self.nl_ub = self.nl_cons(np.inf)
         self.nl_lb = self.nl_cons(-np.inf)
 
-        self.nl_lb['jun_cl_press_min'] = 0
+        self.nl_lb['jun_cl_press_min'] = 10
         self.nl_lb['pump_energy'] = 0
-        self.nl_lb['tank_press_lb'] = 1
+        self.nl_lb['tank_press_lb'] = 2
 
         self.nl_cons_fun = Function('nl_cons', [x, u, tvp, p_set, eps], [self.nl_cons])
 
@@ -152,7 +153,7 @@ class go_mpc:
         --------------------------------------------------------------------------
         """
         #lterm = sum1(x.cat-2)**2  # +sum1((jun_cl_press_min-50)**2)
-        lterm = sum1(pump_energy)/100 + 1e6*sum1(eps.cat)
+        lterm = sum1(pump_energy)/100 + 1e6*sum1((eps.cat)**2)
         mterm = 0
         # Penalize changes in the control input from t_k to t_k+1:
         self.rterm_factor = 1e-2
