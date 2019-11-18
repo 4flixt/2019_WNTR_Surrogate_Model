@@ -65,11 +65,14 @@ class testWN:
 # ::: Added 
     def randomlyScaleMultipliers(self, maxChangePerc):
         # Randomly modifies the demand multipliers by max +/- maxChangePerc, with a probability of 20%
-        for name, j in self.wn.junctions():
+        #for name, j in self.wn.junctions():
+        patNames = self.wn.pattern_name_list
+        for pat in patNames:
             changeRatio = rnd(0, 1)
-            if j.demand_timeseries_list[0].pattern is not None:
-                if changeRatio >= 0.8:
-                    j.demand_timeseries_list[0].pattern.multipliers += (j.demand_timeseries_list[0].pattern.multipliers*np.random.uniform(low=-maxChangePerc, high=maxChangePerc, size=(len(j.demand_timeseries_list[0].pattern.multipliers))))
+            if changeRatio >= 0.8:
+                currPat = self.wn.get_pattern(pat)
+                currPat.multipliers += (currPat.multipliers*np.random.uniform(low=-maxChangePerc, high=maxChangePerc, size=(len(currPat.multipliers))))
+
 
     def randomlyShiftMultipliers(self, maxChange):
         # Randomly modifies the demand multipliers by max +/- maxChange hours, with a probability of 20%
