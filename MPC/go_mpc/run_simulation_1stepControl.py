@@ -64,7 +64,7 @@ nn_model_name = '010_man_5x60_only_mpc'
 cluster_labels = pd.read_json(nn_model_path+'cluster_labels_only_mpc.json')
 pressure_factor = pd.read_json(nn_model_path+'pressure_factor_only_mpc.json')
 
-result_name = '014_mod_010_results'
+result_name = '016_mod_010_results'
 
 # Create controller:
 n_horizon = 10
@@ -80,7 +80,7 @@ mpc_flag = []
 def plot_pred(gmpc, results, time_arr):
     # pdb.set_trace()
     plt.close('all')
-    fig, ax = plt.subplots(3, 1)
+    fig, ax = plt.subplots(4, 1)
     t_start = np.maximum(0, time_arr[0]-20*3600)
     t_end = time_arr[-1]
 
@@ -103,6 +103,8 @@ def plot_pred(gmpc, results, time_arr):
     ax[2].set_prop_cycle(None)
     ax[2].plot(time_arr[:-1], p_min, '--')
     ax[2].set_xlim(t_start, t_end)
+
+    e_pump = horzcat(*gmpc.obj_aux_num['nl_cons', :, 'jun_cl_press_min']).T.full()
     plt.show()
 
 
@@ -147,8 +149,8 @@ for t in range(simTimeSteps):
     """
     startT = t
     dt_hyd = ctown.wn.options.time.hydraulic_timestep
-    lbound_noise = 1
-    ubound_noise = 1
+    lbound_noise = 1.2
+    ubound_noise = 0.8
     demand_pred = ctown.forecast_demand_gnoise(n_horizon, startT*dt_hyd, dt_hyd, lbound_noise, ubound_noise)
 
     time_arr = np.arange(dt_hyd*t, dt_hyd*(t+n_horizon+1), dt_hyd)-dt_hyd
