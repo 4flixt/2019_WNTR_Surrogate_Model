@@ -22,8 +22,8 @@ import random
 # In[3]:
 
 
-#inp_file = '../Code/c-town_true_network_simplified.inp'
-inp_file = '../Code/c-town_true_network_initialOpen.inp'
+inp_file = '../Code/c-town_true_network_simplified_2speed.inp'
+#inp_file = '../Code/c-town_true_network_initialOpen.inp'
 ctown = twm(inp_file)
 
 # # Setting up multiple simulations for AI training
@@ -71,7 +71,7 @@ for i in range(150): # Number of simulations
     #
     # Shifting
     ctown.randomlyShiftMultipliers(3)  # Input is the maximum time shift allowed (in hours)
-    
+
     # ::: Running the simulation
     start_time = time.time()
                
@@ -85,7 +85,7 @@ for i in range(150): # Number of simulations
     results.energy = economics.pump_energy(results.link['flowrate'], results.node['head'], ctown.wn)
     
     # ::: Saving simulation output
-    with open("results_sim_%s_noControls_fullCtown.pkl" % i, "wb") as f:
+    with open("results_sim_%s_noControls_2speed.pkl" % i, "wb") as f:
         pickle.dump(results, f)
         f.close()
 
