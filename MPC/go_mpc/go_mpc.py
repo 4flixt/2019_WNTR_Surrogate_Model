@@ -141,9 +141,9 @@ class go_mpc:
         self.nl_ub = self.nl_cons(np.inf)
         self.nl_lb = self.nl_cons(-np.inf)
 
-        self.nl_lb['jun_cl_press_min'] = 30
+        self.nl_lb['jun_cl_press_min'] = 10
         self.nl_lb['pump_energy'] = 0
-        self.nl_lb['tank_press_lb'] = 0
+        self.nl_lb['tank_press_lb'] = 1.5
 
         self.nl_cons_fun = Function('nl_cons', [x, u, tvp, p_set, eps], [self.nl_cons])
 
@@ -153,10 +153,7 @@ class go_mpc:
         --------------------------------------------------------------------------
         """
         #lterm = sum1(x.cat-2)**2  # +sum1((jun_cl_press_min-50)**2)
-        lterm = sum1(pump_energy)
-        lterm += 1e6*sum1((eps['tank_press_lb']))
-        #lterm += 1e6*sum1((eps['pump_energy'])**2)
-        lterm += 1e2*sum1((eps['jun_cl_press_min']))
+        lterm = sum1(pump_energy)/100 + 1e6*sum1((eps.cat)**2)
         mterm = 0
         # Penalize changes in the control input from t_k to t_k+1:
         self.rterm_factor = 1e-2
