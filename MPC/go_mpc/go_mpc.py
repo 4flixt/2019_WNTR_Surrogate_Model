@@ -141,7 +141,7 @@ class go_mpc:
         self.nl_ub = self.nl_cons(np.inf)
         self.nl_lb = self.nl_cons(-np.inf)
 
-        self.nl_lb['jun_cl_press_min'] = 0
+        self.nl_lb['jun_cl_press_min'] = 10
         self.nl_lb['pump_energy'] = 0
         self.nl_lb['tank_press_lb'] = 2
 
