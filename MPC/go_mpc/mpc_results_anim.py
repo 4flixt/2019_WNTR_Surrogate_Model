@@ -43,10 +43,10 @@ nw_link_df = pd.DataFrame(ctown.wn.links.todict())
 
 
 n_horizon = 10
-nn_model_path = './model/007_man_5x50_both_datasets_filtered_mpc02/'
-nn_model_name = '007_man_5x50_both_datasets_filtered_mpc02'
-cluster_labels = pd.read_json(nn_model_path+'cluster_labels_dt1h_both_datasets.json')
-pressure_factor = pd.read_json(nn_model_path+'pressure_factor_dt1h_both_datasets.json')
+nn_model_path = './model/010_man_5x60_only_mpc/'
+nn_model_name = '010_man_5x60_only_mpc'
+cluster_labels = pd.read_json(nn_model_path+'cluster_labels_only_mpc.json')
+pressure_factor = pd.read_json(nn_model_path+'pressure_factor_only_mpc.json')
 gmpc = go_mpc(n_horizon, nn_model_path, nn_model_name, cluster_labels, pressure_factor, 0, 1)
 
 
@@ -55,10 +55,10 @@ gmpc = go_mpc(n_horizon, nn_model_path, nn_model_name, cluster_labels, pressure_
 Load Results
 -------------------------------------------------------
 """
-data_path = './tempResults/'
-mpc_res_full = sio.loadmat(data_path + '006_mod_007_results_full_mpc_sol.mat')['x_mpc_full']
+data_path = '/home/ffiedler/tubCloud/Shared/WDN_SurrogateModels/_RESULTS/MPC/001_economic/'
+mpc_res_full = sio.loadmat(data_path + '014_mod_010_results_sim_time.mat')['x_mpc_full']
 
-with open(data_path+'006_mod_007_results_sim_time.pkl', 'rb') as f:
+with open(data_path+'014_mod_010_results_full_mpc_sol.pkl', 'rb') as f:
     results = pickle.load(f)
 
 
