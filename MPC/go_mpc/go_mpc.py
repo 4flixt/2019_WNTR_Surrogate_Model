@@ -143,7 +143,7 @@ class go_mpc:
 
         self.nl_lb['jun_cl_press_min'] = 10
         self.nl_lb['pump_energy'] = 0
-        self.nl_lb['tank_press_lb'] = 2
+        self.nl_lb['tank_press_lb'] = 0.5
 
         self.nl_cons_fun = Function('nl_cons', [x, u, tvp, p_set, eps], [self.nl_cons])
 

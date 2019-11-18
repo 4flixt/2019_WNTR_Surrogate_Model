@@ -64,7 +64,7 @@ nn_model_name = '015_man_5x50_only_mpc_b0'
 cluster_labels = pd.read_json(nn_model_path+'cluster_labels_only_mpc_03.json')
 pressure_factor = pd.read_json(nn_model_path+'pressure_factor_only_mpc_03.json')
 
-result_name = '019_mod_015_results'
+result_name = '020_mod_015_results'
 
 # Create controller:
 n_horizon = 10
