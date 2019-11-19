@@ -22,7 +22,7 @@ matplotlib.rcParams['font.size'] = 12
 matplotlib.rcParams['axes.unicode_minus'] = False
 matplotlib.rcParams['svg.fonttype'] = 'none'
 
-output_format = ''
+output_format = 'gif'
 """
 -------------------------------------------------------
 Load Network
@@ -43,10 +43,10 @@ nw_link_df = pd.DataFrame(ctown.wn.links.todict())
 
 
 n_horizon = 10
-nn_model_path = './model/010_man_5x60_only_mpc/'
-nn_model_name = '010_man_5x60_only_mpc'
-cluster_labels = pd.read_json(nn_model_path+'cluster_labels_only_mpc.json')
-pressure_factor = pd.read_json(nn_model_path+'pressure_factor_only_mpc.json')
+nn_model_name = '018_man_4x50_25cl'
+nn_model_path = './model/{}/'.format(nn_model_name)
+cluster_labels = pd.read_json(nn_model_path+'cluster_labels_25cl.json')
+pressure_factor = pd.read_json(nn_model_path+'pressure_factor_25cl.json')
 gmpc = go_mpc(n_horizon, nn_model_path, nn_model_name, cluster_labels, pressure_factor, 0, 1)
 
 
@@ -56,17 +56,20 @@ Load Results
 -------------------------------------------------------
 """
 data_path = '/home/ffiedler/tubCloud/Shared/WDN_SurrogateModels/_RESULTS/MPC/001_economic/'
-mpc_res_full = sio.loadmat(data_path + '014_mod_010_results_sim_time.mat')['x_mpc_full']
+mpc_res = sio.loadmat(data_path + '027_mod_018_results_full_mpc_sol.mat')
+obj_x_full = mpc_res['x_mpc_full']
+obj_aux_full = mpc_res['mpc_aux_full']
 
-with open(data_path+'014_mod_010_results_full_mpc_sol.pkl', 'rb') as f:
+with open(data_path+'027_mod_018_results_sim_time.pkl', 'rb') as f:
     results = pickle.load(f)
 
 
-fig = plt.figure(figsize=(12, 5))
-ax1 = plt.subplot2grid((3, 3), (0, 0), rowspan=3)
-ax2 = plt.subplot2grid((3, 3), (0, 1), colspan=2)
-ax3 = plt.subplot2grid((3, 3), (1, 1), colspan=2, sharex=ax2)
-ax4 = plt.subplot2grid((3, 3), (2, 1), colspan=2, sharex=ax2)
+fig = plt.figure(figsize=(12, 7))
+ax1 = plt.subplot2grid((4, 5), (0, 0), rowspan=4, colspan=2)
+ax2 = plt.subplot2grid((4, 5), (0, 2), colspan=3)
+ax3 = plt.subplot2grid((4, 5), (1, 2), colspan=3, sharex=ax2)
+ax4 = plt.subplot2grid((4, 5), (2, 2), colspan=3, sharex=ax2)
+ax5 = plt.subplot2grid((4, 5), (3, 2), colspan=3, sharex=ax2)
 
 ax2.yaxis.tick_right()
 ax2.yaxis.set_label_position("right")
@@ -79,23 +82,30 @@ ax3.get_xaxis().set_visible(False)
 ax4.yaxis.tick_right()
 ax4.yaxis.set_label_position("right")
 
+ax5.yaxis.tick_right()
+ax5.yaxis.set_label_position("right")
+
 ax2.set_ylabel('Tank level [m]')
 ax3.set_ylabel('Pump speed [-]')
 ax4.set_ylabel('Normalized \n valve setting [-]')
-ax4.set_xlabel('time [h]')
+ax5.set_ylabel('Minimal \n pressure [m]')
+ax5.set_xlabel('time [h]')
 
 fig.align_ylabels()
 fig.tight_layout()
-fig.tight_layout(pad=0.1)
+fig.tight_layout(pad=0.5)
 
 results.node['pressure'][node_names[0]].head()
 tank_level = results.node['pressure'][node_names[0]].to_numpy()
 pump_speed = results.link['setting'][link_names[0]].to_numpy()
 norm_valve = (results.link['setting'][link_names[2]]/np.array([600, 600, 600, 70])).to_numpy()
+jun_cl_press_min_res = results.press_cl_min.to_numpy()
 
 time = (results.node['pressure'].index/3600).to_numpy()
 dt = 1  # h
 plot_horizon = 20
+
+t_end_anim = 180  # time.shape[0]
 
 
 def update(t):
@@ -110,16 +120,17 @@ def update(t):
     ax2.cla()
     ax3.cla()
     ax4.cla()
+    ax5.cla()
 
     press_now = results.node['pressure'].iloc[t]
     valves_now = results.link['setting'][link_names[2]].iloc[t]/np.array([600, 600, 600, 70])
     pumps_now = results.link['setting'][link_names[0]].iloc[t]
 
-    wntr.graphics.plot_network(ctown.wn, node_attribute=press_now[node_names[2]], node_size=25,
+    wntr.graphics.plot_network(ctown.wn, node_attribute=press_now[node_names[2]], node_size=40,
                                node_cmap='CMRmap', add_colorbar=True, ax=ax1)  # CMRmap
 
     mesh = ax1.collections[1]
-    mesh.set_clim(0, 200)
+    mesh.set_clim(0, 150)
 
     for i, link_i in enumerate(link_names[0]):
         start_i = nw_link_df[link_i].loc['start_node'].__dict__['_coordinates']
@@ -155,41 +166,52 @@ def update(t):
     #ax1.legend(pump_line+valve_line+[tank_dot, reservoir_dot], ['pumps', 'valves', 'tanks', 'reservoir'], loc='upper left')
 
     # Get current x prediction:
-    obj_x_now = gmpc.obj_x(mpc_res_full[t, :])
+    if t > 0:
+        obj_x_now = gmpc.obj_x(obj_x_full[t-1, :])
+        obj_aux_now = gmpc.mpc_obj_aux(obj_aux_full[t-1, :])
 
-    time_pred = np.arange(t, t+11*dt, dt)-dt
-    t_start = np.maximum(0, t-plot_horizon)
-    x_pred = horzcat(*obj_x_now['x', :, 'tank_press']).full().T
-    # Tank level plot:
-    ax2.plot(time[t_start:t], tank_level[t_start:t, :])
-    ax2.set_prop_cycle(None)
-    ax2.plot(time_pred, x_pred, '--')
-    ax2.set_ylabel('Tank level [m]')
-    ax2.set_ylim(0, 6)
+        time_pred = np.arange(t, t+11*dt, dt)-dt
+        t_start = np.maximum(0, t-plot_horizon)
+        x_pred = horzcat(*obj_x_now['x', :, 'tank_press']).full().T
+        # Tank level plot:
+        ax2.plot(time[t_start:t], tank_level[t_start:t, :])
+        ax2.set_prop_cycle(None)
+        ax2.plot(time_pred, x_pred, '--')
+        ax2.set_ylabel('Tank level [m]')
+        ax2.set_ylim(0, 6)
 
-    pump_pred = horzcat(*obj_x_now['u', :, 'head_pump']).full().T
-    # Tank level plot:
-    ax3.step(time[t_start:t], pump_speed[t_start:t, :])
-    ax3.set_prop_cycle(None)
-    ax3.step(time_pred[:-1], pump_pred, '--')
-    ax3.set_ylabel('Pump speed [-]')
-    ax3.set_ylim(0, 2)
+        pump_pred = horzcat(*obj_x_now['u', :, 'head_pump']).full().T
+        # Tank level plot:
+        ax3.step(time[t_start:t], pump_speed[t_start:t, :])
+        ax3.set_prop_cycle(None)
+        ax3.step(time_pred[:-1], pump_pred, '--')
+        ax3.set_ylabel('Pump speed [-]')
+        ax3.set_ylim(0, 1)
 
-    PRvalve_pred = horzcat(*obj_x_now['u', :, 'PRValve']).full().T/600
-    TCvalve_pred = horzcat(*obj_x_now['u', :, 'TCValve']).full().T/70
-    valve_pred = np.concatenate((PRvalve_pred, TCvalve_pred), axis=1)
-    ax4.step(time[t_start:t], norm_valve[t_start:t, :])
-    ax4.set_prop_cycle(None)
-    ax4.step(time_pred[:-1], valve_pred, '--')
+        PRvalve_pred = horzcat(*obj_x_now['u', :, 'PRValve']).full().T/600
+        TCvalve_pred = horzcat(*obj_x_now['u', :, 'TCValve']).full().T/70
+        valve_pred = np.concatenate((PRvalve_pred, TCvalve_pred), axis=1)
+        ax4.step(time[t_start:t], norm_valve[t_start:t, :])
+        ax4.set_prop_cycle(None)
+        ax4.step(time_pred[:-1], valve_pred, '--')
 
-    ax4.set_ylabel('Normalized \n valve setting [-]')
-    ax4.set_ylim(0, 1)
-    ax4.set_xlabel('time [h]')
+        ax4.set_ylabel('Normalized \n valve setting [-]')
+        ax4.set_ylim(0, 1)
+
+        jun_cl_press_min_sc = horzcat(*obj_aux_now['nl_cons', :, 'jun_cl_press_min']).full().T
+        jun_cl_press_min_eps = horzcat(*obj_x_now['eps', :, 'jun_cl_press_min']).full().T
+        jun_cl_press_min = jun_cl_press_min_sc-jun_cl_press_min_eps
+
+        ax5.plot(time[t_start:t], jun_cl_press_min_res[t_start:t, :])
+        ax5.set_prop_cycle(None)
+        ax5.plot(time_pred[:-1], jun_cl_press_min, '--')
+
+        ax5.set_ylabel('minimal \n pressure [m]')
+        ax5.set_xlabel('time [h]')
+        ax5.set_ylim(-10, 120)
 
 
-# update(1)
-
-anim = FuncAnimation(fig, update, frames=time.shape[0], repeat=False)
+anim = FuncAnimation(fig, update, frames=t_end_anim, repeat=False)
 
 if 'mp4' in output_format:
     FFWriter = FFMpegWriter(fps=6, extra_args=['-vcodec', 'libx264'])
