@@ -160,7 +160,6 @@ for t in range(simTimeSteps):
         ubound_noise = 1.
         demand_pred = ctown.forecast_demand_gnoise(n_horizon, startT*dt_hyd, dt_hyd, lbound_noise, ubound_noise)
 
-        time_arr = np.arange(dt_hyd*t, dt_hyd*(t+n_horizon+1), dt_hyd)-dt_hyd
         # Cluster demand:
         demand_pred_cl = demand_pred.groupby(cluster_labels.loc['pressure_cluster'], axis=1).sum()
 
@@ -190,13 +189,6 @@ for t in range(simTimeSteps):
             mpc_aux_full = np.append(mpc_aux_full, gmpc.obj_aux_num.cat.full().T, axis=0)
             mpc_flag.append(gmpc.solver_stats['success'])
 
-        if True:
-            if t >= 1:
-                if t >= 2:
-                    p.terminate()
-                p = Process(target=plot_pred, args=(gmpc, results, time_arr))
-                p.start()
-
         # ::::::::::::::::::::::::::::::::::::::
         ctown.control_action(control_components, control_vector, t-1, ctown.wn.options.time.hydraulic_timestep)
 
@@ -209,11 +201,18 @@ for t in range(simTimeSteps):
     results.tankLevels = results.node['head'][nodeNames[0]]-tankEl
     results.energy = economics.pump_energy(results.link['flowrate'], results.node['head'], ctown.wn)
     results.press_cl_min = results.node['pressure'][nodeNames[2]].groupby(cluster_labels.loc['pressure_cluster'], axis=1).min()
-    pdb.set_trace()
     # ::: Saving simulation output
     with open("tempResults/{}_sim_time.pkl".format(result_name), "wb") as f:
         pickle.dump(results, f)
         f.close()
+
+    if False:
+        if t >= 1:
+            if t >= 2:
+                p.terminate()
+            time_arr = np.arange(dt_hyd*t, dt_hyd*(t+n_horizon+1), dt_hyd)-dt_hyd
+            p = Process(target=plot_pred, args=(gmpc, results.head(-1), time_arr))
+            p.start()
 
     sio.savemat('./tempResults/{}_full_mpc_sol.mat'.format(result_name), {'x_mpc_full': x_mpc_full, 'mpc_aux_full': mpc_aux_full, 'mpc_flag': mpc_flag})
 
