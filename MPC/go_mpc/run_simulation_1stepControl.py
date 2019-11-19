@@ -149,70 +149,67 @@ for t in range(simTimeSteps):
         ctown.wn.options.time.duration = 0
         ctown.wn.options.time.duration = t*3600
 
-    """
-    ---------------------------------------------------
-    Forecasting water demand for the next k steps
-    ---------------------------------------------------
-    """
-    startT = t
-    dt_hyd = ctown.wn.options.time.hydraulic_timestep
-    lbound_noise = 1.
-    ubound_noise = 1.
-    demand_pred = ctown.forecast_demand_gnoise(n_horizon, startT*dt_hyd, dt_hyd, lbound_noise, ubound_noise)
+        """
+        ---------------------------------------------------
+        Forecasting water demand for the next k steps
+        ---------------------------------------------------
+        """
+        startT = t
+        dt_hyd = ctown.wn.options.time.hydraulic_timestep
+        lbound_noise = 1.
+        ubound_noise = 1.
+        demand_pred = ctown.forecast_demand_gnoise(n_horizon, startT*dt_hyd, dt_hyd, lbound_noise, ubound_noise)
 
-    time_arr = np.arange(dt_hyd*t, dt_hyd*(t+n_horizon+1), dt_hyd)-dt_hyd
-    # Cluster demand:
-    demand_pred_cl = demand_pred.groupby(cluster_labels.loc['pressure_cluster'], axis=1).sum()
+        time_arr = np.arange(dt_hyd*t, dt_hyd*(t+n_horizon+1), dt_hyd)-dt_hyd
+        # Cluster demand:
+        demand_pred_cl = demand_pred.groupby(cluster_labels.loc['pressure_cluster'], axis=1).sum()
 
-    """
-    ---------------------------------------------------
-    Get current state:
-    ---------------------------------------------------
-    """
-    if t == 0:
-        x0 = np.array([3, 3, 2.5, 5.2, 1, 0.5, 2.5])
-    else:
+        """
+        ---------------------------------------------------
+        Get current state:
+        ---------------------------------------------------
+        """
         x0 = np.maximum(results.tankLevels.iloc[t-1].to_numpy(), 1e-3)
         print(results.tankLevels.iloc[t-1])
 
-    """
-    ---------------------------------------------------
-    Setup (for current time) and Run controller
-    ---------------------------------------------------
-    """
-    # Setup controller for time t:
-    gmpc.obj_p_num['x_0'] = x0
-    gmpc.obj_p_num['tvp', :, 'jun_cl_demand_sum'] = vertsplit(demand_pred_cl.to_numpy())
-    gmpc.obj_p_num['tvp', :, 'u_prev'] = gmpc.obj_x_num['u']
+        """
+        ---------------------------------------------------
+        Setup (for current time) and Run controller
+        ---------------------------------------------------
+        """
+        # Setup controller for time t:
+        gmpc.obj_p_num['x_0'] = x0
+        gmpc.obj_p_num['tvp', :, 'jun_cl_demand_sum'] = vertsplit(demand_pred_cl.to_numpy())
+        gmpc.obj_p_num['tvp', :, 'u_prev'] = gmpc.obj_x_num['u']
 
-    gmpc.solve()
-    control_vector = gmpc.obj_x_num['u', 0].full().flatten()
+        gmpc.solve()
+        control_vector = gmpc.obj_x_num['u', 0].full().flatten()
 
-    if True:
-        x_mpc_full = np.append(x_mpc_full, gmpc.obj_x_num.cat.full().T, axis=0)
-        mpc_aux_full = np.append(mpc_aux_full, gmpc.obj_aux_num.cat.full().T, axis=0)
-        mpc_flag.append(gmpc.solver_stats['success'])
+        if True:
+            x_mpc_full = np.append(x_mpc_full, gmpc.obj_x_num.cat.full().T, axis=0)
+            mpc_aux_full = np.append(mpc_aux_full, gmpc.obj_aux_num.cat.full().T, axis=0)
+            mpc_flag.append(gmpc.solver_stats['success'])
 
-    if True:
-        if t >= 1:
-            if t >= 2:
-                p.terminate()
-            p = Process(target=plot_pred, args=(gmpc, results, time_arr))
-            p.start()
+        if True:
+            if t >= 1:
+                if t >= 2:
+                    p.terminate()
+                p = Process(target=plot_pred, args=(gmpc, results, time_arr))
+                p.start()
+
+        # ::::::::::::::::::::::::::::::::::::::
+        ctown.control_action(control_components, control_vector, t-1, ctown.wn.options.time.hydraulic_timestep)
+
 
     # ::: Running the simulation
     start_time = time.time()
-
-    # ::::::::::::::::::::::::::::::::::::::
-    ctown.control_action(control_components, control_vector, t, ctown.wn.options.time.hydraulic_timestep)
-
     # ::: Run the simulation up to the current time step
     sim = wntr.sim.EpanetSimulator(ctown.wn)
     results = sim.run_sim()
     results.tankLevels = results.node['head'][nodeNames[0]]-tankEl
     results.energy = economics.pump_energy(results.link['flowrate'], results.node['head'], ctown.wn)
     results.press_cl_min = results.node['pressure'][nodeNames[2]].groupby(cluster_labels.loc['pressure_cluster'], axis=1).min()
-    #pdb.set_trace()
+    pdb.set_trace()
     # ::: Saving simulation output
     with open("tempResults/{}_sim_time.pkl".format(result_name), "wb") as f:
         pickle.dump(results, f)
