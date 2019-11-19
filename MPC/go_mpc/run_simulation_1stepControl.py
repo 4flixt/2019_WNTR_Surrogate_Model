@@ -32,6 +32,7 @@ inp_file = '../../Code/c-town_true_network_simplified_controls.inp'
 ctown = twm(inp_file)
 nw_node_df = pd.DataFrame(ctown.wn.nodes.todict())
 nw_link_df = pd.DataFrame(ctown.wn.links.todict())
+link_names = ctown.getLinkName()
 
 # %% ::: Setting up time and options for simulation
 nDaysSim = 30
@@ -55,7 +56,7 @@ nodeNames = ctown.getNodeName()
 
 # ::: Setting upper and lower bounds to control elements
 control_components = ctown.wn.pump_name_list + ctown.wn.valve_name_list
-min_control = np.array([0.36, 0.66, 0.66, 0.56, 0.56, 0., 0., 0., 0.])  # Lower bondary for controls
+min_control = np.array([0.34, 0.64, 0.64, 0.54, 0.54, 0., 0., 0., 0.])  # Lower bondary for controls
 max_control = np.array([1., 1., 1., 1., 1., 150.0, 150.0, 150.0, 70.])  # Upper bondary for controls
 
 # Load clustering information:
@@ -64,7 +65,7 @@ nn_model_name = '015_man_5x50_only_mpc_b0'
 cluster_labels = pd.read_json(nn_model_path+'cluster_labels_only_mpc_03.json')
 pressure_factor = pd.read_json(nn_model_path+'pressure_factor_only_mpc_03.json')
 
-result_name = '025_mod_015_results'
+result_name = '026_mod_015_results'
 
 # Create controller:
 n_horizon = 10
@@ -96,15 +97,21 @@ def plot_pred(gmpc, results, time_arr):
     ax[1].step(time_arr[:-1], u_pump, '--')
     ax[1].set_prop_cycle(None)
     head_pump_speed.plot(ax=ax[1], legend=False)
-    ax[0].set_xlim(t_start, t_end)
+    ax[1].set_xlim(t_start, t_end)
 
     p_min = horzcat(*gmpc.obj_aux_num['nl_cons', :, 'jun_cl_press_min']).T.full()
     results.press_cl_min.plot(legend=False, ax=ax[2])
     ax[2].set_prop_cycle(None)
     ax[2].plot(time_arr[:-1], p_min, '--')
     ax[2].set_xlim(t_start, t_end)
-
-    e_pump = horzcat(*gmpc.obj_aux_num['nl_cons', :, 'jun_cl_press_min']).T.full()
+    ax[2].set_ylim(-20, 150)
+    #
+    e_pump = horzcat(*gmpc.obj_aux_num['nl_cons', :, 'pump_energy']).T.full()
+    energy_real = results.energy[link_names[0]]/1000
+    energy_real.plot(legend=False, ax=ax[3])
+    ax[3].set_prop_cycle(None)
+    ax[3].plot(time_arr[:-1], e_pump, '--')
+    ax[3].set_xlim(t_start, t_end)
     plt.show()
 
 
@@ -149,8 +156,8 @@ for t in range(simTimeSteps):
     """
     startT = t
     dt_hyd = ctown.wn.options.time.hydraulic_timestep
-    lbound_noise = 0.85
-    ubound_noise = 1.15
+    lbound_noise = 1.
+    ubound_noise = 1.
     demand_pred = ctown.forecast_demand_gnoise(n_horizon, startT*dt_hyd, dt_hyd, lbound_noise, ubound_noise)
 
     time_arr = np.arange(dt_hyd*t, dt_hyd*(t+n_horizon+1), dt_hyd)-dt_hyd
@@ -186,7 +193,7 @@ for t in range(simTimeSteps):
         mpc_aux_full = np.append(mpc_aux_full, gmpc.obj_aux_num.cat.full().T, axis=0)
         mpc_flag.append(gmpc.solver_stats['success'])
 
-    if False:
+    if True:
         if t >= 1:
             if t >= 2:
                 p.terminate()
@@ -205,7 +212,7 @@ for t in range(simTimeSteps):
     results.tankLevels = results.node['head'][nodeNames[0]]-tankEl
     results.energy = economics.pump_energy(results.link['flowrate'], results.node['head'], ctown.wn)
     results.press_cl_min = results.node['pressure'][nodeNames[2]].groupby(cluster_labels.loc['pressure_cluster'], axis=1).min()
-
+    #pdb.set_trace()
     # ::: Saving simulation output
     with open("tempResults/{}_sim_time.pkl".format(result_name), "wb") as f:
         pickle.dump(results, f)
