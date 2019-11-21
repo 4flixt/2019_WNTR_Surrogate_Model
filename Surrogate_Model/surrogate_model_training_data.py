@@ -86,7 +86,7 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
         # The setting for head pump is alias for normalized speed (usually in the range of 0-1)
         head_pump_speed = results.link['setting'][nw_link_df.keys()[nw_link_df.loc['link_type'] == 'Pump']]
         head_pump_status = results.link['status'][nw_link_df.keys()[nw_link_df.loc['link_type'] == 'Pump']]
-        head_pump_speed_corr = head_pump_speed*head_pump_status
+        head_pump_speed_corr = head_pump_speed
 
         pump_energy = economics.pump_energy(results.link['flowrate'], results.node['head'], ctown.wn)[link_names[0]]
         pump_energy /= 1000

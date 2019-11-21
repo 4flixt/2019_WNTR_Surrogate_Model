@@ -135,7 +135,7 @@ class go_mpc:
         self.nl_cons = struct_MX([
             entry('tank_press_lb',    expr=self.x['tank_press']+self.eps['tank_press_lb']),
             entry('jun_cl_press_min', expr=jun_cl_press_min+self.eps['jun_cl_press_min']),
-            entry('pump_energy',      expr=pump_energy+self.eps['pump_energy'])
+            entry('pump_energy',      expr=pump_energy)
         ])
 
         self.nl_ub = self.nl_cons(np.inf)
@@ -143,7 +143,7 @@ class go_mpc:
 
         self.nl_lb['jun_cl_press_min'] = 10
         self.nl_lb['pump_energy'] = 0
-        self.nl_lb['tank_press_lb'] = 2
+        self.nl_lb['tank_press_lb'] = 0.5
 
         self.nl_cons_fun = Function('nl_cons', [x, u, tvp, p_set, eps], [self.nl_cons])
 
@@ -152,8 +152,8 @@ class go_mpc:
         model: define cost function
         --------------------------------------------------------------------------
         """
-        #lterm = sum1(x.cat-2)**2  # +sum1((jun_cl_press_min-50)**2)
-        lterm = sum1(pump_energy)/100 + 1e6*sum1((eps.cat)**2)
+        #lterm = sum1(x.cat-2)**2+1e3*sum1((eps.cat))  # +sum1((jun_cl_press_min-50)**2)
+        lterm = sum1(pump_energy) + 1e2*sum1((eps.cat))
         mterm = 0
         # Penalize changes in the control input from t_k to t_k+1:
         self.rterm_factor = 1e-2

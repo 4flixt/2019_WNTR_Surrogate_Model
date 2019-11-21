@@ -62,7 +62,7 @@ class testWN:
 
 
 
-# ::: Added 
+# ::: Added
     def randomlyScaleMultipliers(self, maxChangePerc):
         # Randomly modifies the demand multipliers by max +/- maxChangePerc, with a probability of 20%
         #for name, j in self.wn.junctions():
@@ -83,11 +83,11 @@ class testWN:
                 currPat = self.wn.get_pattern(pat)
                 rollRatio = random.randint(-maxChange, maxChange)
                 currPat.multipliers = np.roll(currPat.multipliers, rollRatio)
-    
+
     def control_action(self, control_components, control_vector, currTime, timeStepSize):
         '''
         add control action to the current simulation step
-        ''' 
+        '''
         for j in range(len(control_components)): # Iterate over controls
             currComp = self.wn.get_link(control_components[j])
             cond = controls.SimTimeCondition(self.wn, None, currTime*timeStepSize)
@@ -103,11 +103,10 @@ class testWN:
     def forecast_demand_gnoise(self, k, startT, timeStep, lBound, uBound):
         '''
         forecast node demand starting from time startT for the next k timesteps
-        ''' 
+        '''
         forecasted_demand = hydraulics.expected_demand(self.wn, start_time =startT, end_time = timeStep*(k-1)+startT, timestep = timeStep)
         # Adding noise
         # noise = np.random.normal(0,np.mean(np.std(forecasted_demand))*0.10,np.shape(forecasted_demand))
         noise = np.random.uniform(lBound,uBound,np.shape(forecasted_demand))
         forecasted_demand = np.multiply(noise,forecasted_demand)
         return forecasted_demand
-        
