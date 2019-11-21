@@ -22,8 +22,10 @@ import random
 # In[3]:
 
 
-inp_file = '../Code/c-town_true_network_simplified_2speed.inp'
+#inp_file = '../Code/c-town_true_network_simplified_2speed.inp'
 #inp_file = '../Code/c-town_true_network_initialOpen.inp'
+inp_file = '../Code/c-town_true_network_simplified.inp'
+
 ctown = twm(inp_file)
 
 # # Setting up multiple simulations for AI training
@@ -43,7 +45,7 @@ np.array(tankEl)
 nodeNames = ctown.getNodeName()
   
 # ::: Running multiple simulations
-for i in range(150): # Number of simulations
+for i in range(1): # Number of simulations
     print(i)
 
     # ::: Initializing random seed
@@ -62,15 +64,15 @@ for i in range(150): # Number of simulations
     ctown.wn.options.time.duration = simTimeSteps*3600
   
     # ::: Generating random initial states (tank levels)
-    for k, name in ctown.wn.tanks():
-        name.init_level =random.uniform(name.min_level, name.max_level)
+    #for k, name in ctown.wn.tanks():
+    #    name.init_level =random.uniform(name.min_level, name.max_level)
         
     # ::: Generating random demands
     # Scaling
-    ctown.randomlyScaleMultipliers(0.1)  # Input is the maximum possible percentage of change for each pattern value
+    #ctown.randomlyScaleMultipliers(0.1)  # Input is the maximum possible percentage of change for each pattern value
     #
     # Shifting
-    ctown.randomlyShiftMultipliers(3)  # Input is the maximum time shift allowed (in hours)
+    #ctown.randomlyShiftMultipliers(3)  # Input is the maximum time shift allowed (in hours)
 
     # ::: Running the simulation
     start_time = time.time()
