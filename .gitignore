@@ -104,19 +104,19 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-Code/end1vAeb
+WNTR_Model/end1vAeb
 
-Code/ents0JX7
+WNTR_Model/ents0JX7
 
-Code/enVd8VG7
+WNTR_Model/enVd8VG7
 
-Code/enxCoz0q
+WNTR_Model/enxCoz0q
 
-Code/temp.bin
+WNTR_Model/temp.bin
 
-Code/temp.inp
+WNTR_Model/temp.inp
 
-Code/temp.rpt
+WNTR_Model/temp.rpt
 
 MPC/go_mpc/tempResults/
 
@@ -131,3 +131,7 @@ MPC/go_mpc/enjKVgSe
 MPC/go_mpc/enPHdFG9
 
 *.gif
+
+WNTR_Model/end1vAeb
+
+WNTR_Model/ents0JX7
