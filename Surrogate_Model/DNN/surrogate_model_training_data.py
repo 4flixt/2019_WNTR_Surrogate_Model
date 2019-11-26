@@ -8,18 +8,29 @@ import pandas as pd
 import pdb
 
 import sys
-sys.path.append('../')
+sys.path.append('../../WNTR_Model/')
 from testWN import testWN as twm
 
 
-def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_input=True, narx_output=False, return_lists=False, inp_file=None, shift_x=False, shift_aux_out=False):
+def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_input=True, narx_output=False, return_lists=False, inp_file=None):
+    """
+    This file is an outsourced implementation from the code in the jupyter notebook "tank_level_surrogate_model.ipynb".
+    In this notebook we developed and tested the pre-processing pipeline on a single result file from WNTR/Epanet.
+    We tested the training process on this limited data source but didn't use the resulting model for control.
+
+    In the jupyter notebook "tank_level_surrogate_model_full.ipynb" we use this outsourced implementation to pre-process multiple result files
+    and create a large training data base. We furthermore trained the model in "tank_level_surrogate_model_full.ipynb"
+    and used the resulting models for the control task.
+    """
+
     """
     --------------------------------------------------
     Get network informations
     --------------------------------------------------
     """
     if not inp_file:
-        inp_file = '../Code/c-town_true_network_simplified_controls.inp'
+        # For legacy reasons.
+        inp_file = '../../WNTR_Model/c-town_true_network_simplified_controls.inp'
     ctown = twm(inp_file)
     nw_node_df = pd.DataFrame(ctown.wn.nodes.todict())
     nw_link_df = pd.DataFrame(ctown.wn.links.todict())
@@ -38,8 +49,6 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
         cl_ind_press = 'pressure'
     else:
         cl_ind_press = 'pressure_cluster'
-
-    n_clusters = 30
 
     nn_input_list = []
     nn_output_list = []
@@ -104,23 +113,11 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
         Data Pre-Processing: 02 - Create states + inputs
         --------------------------------------------------
         """
-        # TODO: Reservoir?
-        state_dict = {  # 'jun_cl_press_mean': jun_cl_press_mean,
-            # 'jun_cl_press_std': jun_cl_press_std,
-            # 'dqual_cl_press_mean': dqual_cl_press_mean,
-            # 'dqual_cl_press_std': dqual_cl_press_std,
+        state_dict = {
             'tank_press': tank_press,
-            # 'tank_level': tank_level,
-            # 'tank_qual': tank_qual,
-            # 'reservoir_press': reservoir_press,
-            # 'reservoir_level': reservoir_level,
-            # 'reservoir_qual': reservoir_qual,
         }
 
         sys_states = pd.concat(state_dict.values(), axis=1, keys=state_dict.keys())
-
-        if shift_x:
-            sys_states = sys_states.shift(1, axis=0)
 
         input_dict = {  # 'head_pump_speed': head_pump_speed,
             'head_pump_speed': head_pump_speed_corr,
@@ -134,9 +131,6 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
                            'jun_cl_press_mean': jun_cl_press_mean, }
 
         aux_outputs = pd.concat(aux_output_dict.values(), axis=1, keys=aux_output_dict.keys())
-
-        if shift_aux_out:
-            aux_output = aux_outputs.shift(-1, axis=0)
 
         """
         --------------------------------------------------
