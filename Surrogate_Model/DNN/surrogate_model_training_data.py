@@ -14,12 +14,12 @@ from testWN import testWN as twm
 
 def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_input=True, narx_output=False, return_lists=False, inp_file=None):
     """
-    This file is an outsourced implementation from the code in the jupyter notebook "tank_level_surrogate_model.ipynb".
+    This file is an outsourced implementation from the code in the jupyter notebook "dnn_surrogate_prototyping.ipynb".
     In this notebook we developed and tested the pre-processing pipeline on a single result file from WNTR/Epanet.
     We tested the training process on this limited data source but didn't use the resulting model for control.
 
-    In the jupyter notebook "tank_level_surrogate_model_full.ipynb" we use this outsourced implementation to pre-process multiple result files
-    and create a large training data base. We furthermore trained the model in "tank_level_surrogate_model_full.ipynb"
+    In the jupyter notebook "dnn_surrogate_full_model.ipynb" we use this outsourced implementation to pre-process multiple result files
+    and create a large training data base. We furthermore trained the model in "dnn_surrogate_full_model.ipynb"
     and used the resulting models for the control task.
     """
 
