@@ -53,7 +53,9 @@ def get_data(file_list, narx_horizon, cluster_labels, pressure_factor, narx_inpu
     nn_input_list = []
     nn_output_list = []
 
-    for file in file_list:
+    for i, file in enumerate(file_list):
+        progress = (i+1)/len(file_list)
+        print('{:.2f}% complete'.format(100*progress), end="\r")
         # Get results
         with open(file, 'rb') as f:
             results = pickle.load(f)
