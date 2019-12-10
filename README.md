@@ -10,7 +10,7 @@ This is the code base for the publication **Economic nonlinear predictive contro
 ## About this repository
 Note that we used Git LFS in this repository. Please follow the instructions [here](https://git-lfs.github.com/) to properly clone the LFS files.
 
-**Please note, that github can natively display jupyter notebook. We extensively used annotations in these notebooks alongside with graphics and result snippets to illustrate our workflow. We suggest to visitors to investigate these notebooks on github to get a first impression of the repository. Please follow the instructions below on where to start.
+**Please note, that github can natively display jupyter notebook. We extensively used annotations in these notebooks alongside with graphics and result snippets to illustrate our workflow. We suggest to visitors to investigate these notebooks on github to get a first impression of the repository. Please follow the instructions below on where to start.**
 
 # Getting started
 When investigating the codebase and this project we advise to follow the same structure as presented in the paper. 
