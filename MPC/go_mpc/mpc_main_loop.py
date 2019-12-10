@@ -25,7 +25,7 @@ import pickle
 import random
 import pdb
 
-from go_mpc import go_mpc
+from mpc_backend import go_mpc
 
 # %% ::: Loading .inp file
 inp_file = '../../Code/c-town_true_network_simplified_controls.inp'
