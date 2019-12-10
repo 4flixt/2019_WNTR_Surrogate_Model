@@ -10,7 +10,7 @@ This is the code base for the publication **Economic nonlinear predictive contro
 ## About this repository
 Note that we used Git LFS in this repository. Please follow the instructions [here](https://git-lfs.github.com/) to properly clone the LFS files.
 
-**Please note, that github can natively display jupyter notebook. We extensively used annotations in these notebooks alongside with graphics and result snippets to illustrate our workflow. We suggest to visitors to investigate these notebooks on github to get a first impression of the repository. Please follow the instructions below on where to start.**
+**Please note, that github can natively display jupyter notebooks. We extensively used annotations in these notebooks alongside with graphics and result snippets to illustrate our workflow. We suggest to visitors to investigate these notebooks on github to get a first impression of the repository. Please follow the instructions below on where to start.**
 
 # Getting started
 When investigating the codebase and this project we advise to follow the same structure as presented in the paper. 
@@ -42,5 +42,9 @@ For the control task, we use non-linear economic model predictive control (MPC) 
 - mpc_backend.py
 - mpc_main_loop.py
 - mpc_results_anim.py
-The optimization problem is setup in the file `mpc_backend.py`. The MPC main loop runs in `mpc_main_loop.py`. In this file, we load the WNTR model and in a loop run the optimization, control the system and measure the state. Note that WNTR with Epanet simulator currently does not properly support starting and stopping. Thus, to create feedback at each time instance, we write the current control input to an Epanet configuration file (`.inp`) with the current timestep. This file gets updated at each iteration. To obtain the next state we re-simulate the entire sequence (from the intial condition) with the recorded sequence of optimal control inputs. Unfortunately, this means that the simulation time grows linearly over time. We found, however, that even for durations > 1 month (with timestep 1h) the simulation time is less than the optimization time (1-5 s). 
 
+The optimization problem is setup in the file `mpc_backend.py`. Here, we also load the weights and configuration from the trained neural network and convert it into a CasADi symbolic expression. 
+The MPC main loop runs in `mpc_main_loop.py`. In this file, we load the WNTR model and in a loop run the optimization, control the system and measure the state. Note that WNTR with Epanet simulator currently does not properly support starting and stopping. Thus, to create feedback at each time instance, we write the current control input to an Epanet configuration file (`.inp`) with the current timestep. This file gets updated at each iteration. To obtain the next state we re-simulate the entire sequence (from the intial condition) with the recorded sequence of optimal control inputs. Unfortunately, this means that the simulation time grows linearly over time. We found, however, that even for durations > 1 month (with timestep 1h) the simulation time is less than the optimization time (1-5 s). 
+
+## WNTR_Model
+This directory containts all the files and tools related to the WNTR model. Most importantly, we used `run_simulation_1stepControl.py` to create the training database for the surrogate model.
